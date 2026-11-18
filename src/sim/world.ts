@@ -6,6 +6,7 @@ import type { Genome } from '../genome';
 import { BALANCE } from './balance';
 import type { SpawnOrder } from './collector';
 import { elementMultiplier } from './elements';
+import { JAM_EVERY, JAM_RANGE, JAM_SECONDS, sabotageTarget } from './sabotage';
 import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
 import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
 
@@ -37,6 +38,9 @@ export interface Monster {
   burnBy: Tower | null;
   nextShoutAt: number;
   nextHopAt: number;
+  /** The tower type this saboteur jams, or null. */
+  sabotage: TowerId | null;
+  nextJamAt: number;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -73,6 +77,7 @@ export type SimEvent =
   | { type: 'shout'; monster: Monster; towers: Tower[] }
   | { type: 'viral'; monster: Monster }
   | { type: 'hop'; monster: Monster }
+  | { type: 'jam'; monster: Monster; towers: Tower[] }
   | { type: 'steal'; monster: Monster; amount: number }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
@@ -214,6 +219,8 @@ export class World {
       burnBy: null,
       nextShoutAt: this.time + 2 + (genome.look.phase % 2),
       nextHopAt: this.time + 2 + (genome.look.phase % 1),
+      sabotage: sabotageTarget(genome),
+      nextJamAt: 0,
       bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
@@ -273,6 +280,15 @@ export class World {
         m.dist += 45;
         m.nextHopAt = this.time + 3;
         this.events.push({ type: 'hop', monster: m });
+      }
+
+      if (m.sabotage && this.time >= m.nextJamAt) {
+        const jammed = this.towers.filter((t) => t.def.id === m.sabotage && Math.hypot(t.x - m.x, t.y - m.y) < JAM_RANGE);
+        if (jammed.length) {
+          for (const t of jammed) t.stunnedUntil = Math.max(t.stunnedUntil, this.time + JAM_SECONDS);
+          m.nextJamAt = this.time + JAM_EVERY;
+          this.events.push({ type: 'jam', monster: m, towers: jammed });
+        }
       }
 
       if (m.genome.family === 'sound' && this.time >= m.nextShoutAt) {

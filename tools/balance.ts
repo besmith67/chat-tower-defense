@@ -29,7 +29,7 @@ const CHAT_POOL = (
   'catJAM EZ Kappa OMEGALUL monkaS Copium W L gg ratio sus based bruh lmao hahaha NOOOO nooo ' +
   'pizza taco bomb nuke robot ninja goblin troll slime spider bee mountain volcano tornado lightning ' +
   'dig hide sneak heal explode sprint yeet angry sleepy cute evil holy hype boom bonk zoom ' +
-  'xqcL asdf hmmm racecar h4x0r 420 69 W W W L KEKW KEKW pog pog'
+  'xqcL asdf hmmm racecar h4x0r 420 69 W W W L KEKW KEKW pog pog water ground pillow armor melt'
 ).split(' ');
 
 function chatter(match: Match, wave: number, seed: number): void {

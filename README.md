@@ -26,6 +26,8 @@ A monster's color shows its element: red fire, cyan frost, yellow storm, green v
 
 Towers also get stronger against species they have killed many times, so chat has to keep changing what it sends.
 
+Chat can also sabotage. Counter words jam a tower type as they walk past it: water, rain, or flood jam Flame; melt, heat, or sun jam Frost; ground, mud, or rubber jam Tesla; armor or shield jam Needle; pillow, jelly, or foam jam Hammer. Spreading tower types out keeps one word from shutting the defense down.
+
 Every fifth wave is a boss wave. Chat votes with `!vote 1`, `!vote 2`, or `!vote 3` on which of its favorite monsters becomes the boss.
 
 ### Controls

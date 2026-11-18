@@ -13,6 +13,7 @@ import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import type { WavePlan } from '../sim/collector';
 import type { CrowdEvent } from '../sim/crowd';
 import { Match } from '../sim/match';
+import { sabotageTarget } from '../sim/sabotage';
 import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
 import { monsterTexture, towerTextures } from './monsterArt';
@@ -564,6 +565,8 @@ export class GameScene extends Phaser.Scene {
     y += bars.length * 14 + 6;
 
     const lines = g.quirks.slice(0, 3).map((q) => `${QUIRK_INFO[q].label}: ${QUIRK_INFO[q].detail}`);
+    const target = sabotageTarget(g);
+    if (target) lines.unshift(`Saboteur: jams ${TOWERS[target].name} towers it walks past.`);
     if (g.family && g.family !== 'beast') lines.push(`${FAMILY_INFO[g.family].label}: ${FAMILY_INFO[g.family].trait}`);
     for (const line of lines) {
       if (y > 650) break;
@@ -810,6 +813,12 @@ export class GameScene extends Phaser.Scene {
       }
       case 'viral':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
+        break;
+      case 'jam':
+        for (const t of e.towers) {
+          this.boltFx(sx(e.monster.x), sy(e.monster.y), sx(t.x), sy(t.y));
+          this.floatText(sx(t.x), sy(t.y) - 26, 'JAMMED', '#ff8fa3', 13);
+        }
         break;
       case 'hop':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'hop', '#ffffff', 11);

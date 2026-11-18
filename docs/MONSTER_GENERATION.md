@@ -278,7 +278,7 @@ What the rest of chat does in the same window changes the result.
 - **Alliteration.** Words with the same first sound move as a linked pack.
 - **Shipped rhymes and alliteration.** Three or more different words with the same rime form a conga line where each member is shielded. Three or more with the same opening consonant cluster form a pack where each member has a speed aura. Members spawn next to each other. At most one chain and one pack per wave, so they stay special.
 - **Copypasta.** A long identical message repeated by many viewers becomes a boss candidate.
-- **Tower sabotage.** Words close in meaning to a tower or its weakness spawn saboteurs that go after that tower type. `rust` targets metal cannons. `ground` targets lightning towers. `mirror` targets lasers. Chat watches the build and types the counter. This is the most direct chat-versus-streamer counterplay.
+- **Tower sabotage.** Words close in meaning to a tower or its weakness spawn saboteurs that go after that tower type. `rust` targets metal cannons. `ground` targets lightning towers. `mirror` targets lasers. Chat watches the build and types the counter. This is the most direct chat-versus-streamer counterplay. Shipped with short hand-written lists per tower in `src/sim/sabotage.ts`; a saboteur jams matching towers it walks past.
 - **Mentions.** An `@user` mention puts that viewer's name on the monster, if the streamer allows it. Typing the streamer's name spawns a rare doppelganger.
 
 ## Layer 8: History
