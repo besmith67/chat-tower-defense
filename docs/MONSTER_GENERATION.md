@@ -287,10 +287,14 @@ Every monster gets threat points from the wave. Genes decide how those points ar
 
 The full system is too much for one step. Ship it in phases.
 
-1. Identity, form, a few curated emotes, and burst merging.
-2. The meaning data, categories, and verbs as abilities.
-3. Emote image analysis, the Emote Studio, and grammar combos.
-4. Rhymes, antonyms, sabotage, evolution, and the bestiary.
+| Phase | Contents | Status |
+|---|---|---|
+| 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
+| 2 | The meaning data, categories, and verbs as abilities | Next |
+| 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
+| 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
+
+The implementation lives in `src/genome`. Tower adaptation from Layer 8 shipped early because it is cheap and central to the loop.
 
 ## Open questions
 

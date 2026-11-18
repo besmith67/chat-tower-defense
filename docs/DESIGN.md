@@ -1,6 +1,6 @@
 # Chat Tower Defense: Design Doc
 
-Status: draft, idea stage.
+Status: milestone 1 is playable. See [ROADMAP.md](ROADMAP.md).
 
 ## Pitch
 
@@ -38,6 +38,7 @@ A 20,000-viewer chat cannot be allowed to send 20,000 times the monsters of a 20
 - **Threat budget per wave.** The level sets a fixed budget. Chat decides how to spend it, not how big it is.
 - **Fixed stat budget per monster.** Genes decide how a monster's points are split, never how many it gets. Rarer monsters get more points but cost more of the wave budget.
 - **Message merging.** Duplicate messages stack into a horde or a titan. Popularity buys power within the budget.
+- **Popular first, nothing lost.** The most-sent species spend the budget first. Species that do not fit wait for the next wave instead of vanishing, and the panel shows which ones are waiting.
 - **Per-user cap.** Each viewer contributes at most one or two monsters per spawn window.
 - **Gold follows threat.** The streamer's income scales with the threat chat spent.
 - **Chat size normalization.** Sample messages so big and small chats feel equally dangerous at the same level.
@@ -98,7 +99,7 @@ tools/lexicon/ offline scripts that build the meaning data
 
 | Platform | Chat | Points or votes | Notes to verify |
 |---|---|---|---|
-| Twitch | IRC over WebSocket, or EventSub | EventSub channel point redemptions, Polls API | Channel points require Affiliate or Partner. |
+| Twitch | IRC over WebSocket with the anonymous login. Built. | EventSub channel point redemptions, Polls API | Channel points require Affiliate or Partner and a Twitch app. |
 | YouTube | Live Chat API | No channel points | API quota limits how often chat can be polled. |
 | Kick | Public API and webhooks | Check current support | Webhooks may need a small relay server. |
 
@@ -114,11 +115,8 @@ Not decided yet. The style must tolerate heavy procedural variation and must sho
 
 Short runs of about 20 minutes suit streams better than an endless mode.
 
-## First milestone
+## Milestones
 
-1. Project setup with TypeScript, Vite, Phaser, and Vitest.
-2. The generator's identity and form layers, with tests.
-3. A playable offline game with one path, three towers, and the Wilds.
-4. Twitch chat through the chat adapter.
+The first milestone is done: a playable game with Twitch chat, third-party emotes, the Wilds, three towers, and the first two generator layers. The full plan is in [ROADMAP.md](ROADMAP.md).
 
-The generator and the balance budget are the riskiest parts, so prototype them first.
+Third-party emotes from 7TV, BTTV, and FFZ are recognized in chat. 7TV, FFZ, and Twitch emote images become monster faces. BTTV images cannot be used in WebGL because their server does not allow cross-origin access.
