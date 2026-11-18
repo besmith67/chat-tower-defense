@@ -20,6 +20,7 @@ export interface PendingSpecies {
   genome: Genome;
   /** The token as chat typed it, so the genome can be rebuilt when an emote's image is analyzed. */
   text: string;
+  overlay?: ChatEmote | null;
   contributions: Contribution[];
   firstAt: number;
 }
@@ -89,7 +90,7 @@ export class SpawnCollector {
     for (const token of tokens) {
       const used = this.perUser.get(message.userId) ?? 0;
       if (used >= this.perViewerCap) break;
-      const genome = makeGenome(token.text, { source: 'chat', emote: token.emote });
+      const genome = makeGenome(token.text, { source: 'chat', emote: token.emote, overlay: token.overlay ?? null });
       if (!genome) continue;
 
       const userName = this.showNames && !isBlocked(message.userName) ? message.userName : 'chat';
@@ -97,7 +98,7 @@ export class SpawnCollector {
       const existing = this.species.get(genome.key);
       if (existing) existing.contributions.push(contribution);
       else {
-        this.species.set(genome.key, { genome, text: token.text, contributions: [contribution], firstAt: message.at });
+        this.species.set(genome.key, { genome, text: token.text, overlay: token.overlay ?? null, contributions: [contribution], firstAt: message.at });
         this.trimBacklog();
       }
       this.perUser.set(message.userId, used + 1);
@@ -116,8 +117,8 @@ export class SpawnCollector {
    */
   refreshEmotes(): void {
     for (const pending of this.species.values()) {
-      if (!pending.genome.emote) continue;
-      const fresh = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote });
+      if (!pending.genome.emote && !pending.overlay) continue;
+      const fresh = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote, overlay: pending.overlay ?? null });
       if (fresh && fresh.key === pending.genome.key) pending.genome = fresh;
     }
   }
@@ -182,6 +183,8 @@ export class SpawnCollector {
 interface Token {
   text: string;
   emote: ChatEmote | null;
+  /** A 7TV zero-width emote layered on top of this one, as in "KEKW RainTime". */
+  overlay?: ChatEmote | null;
 }
 
 /**
@@ -198,9 +201,20 @@ export function extractTokens(message: ChatMessage): Token[] {
     return [{ text: word, emote: emoteByName.get(word) ?? null }];
   }
   // In longer messages only emotes, curated names, and emoji count, so sentences do not spawn every word.
-  return unique
-    .filter((w) => emoteByName.has(w) || CURATED_EMOTES[w] || readEmoji(w))
-    .map((w) => ({ text: w, emote: emoteByName.get(w) ?? null }));
+  // A zero-width emote layers onto the token before it instead of spawning on its own.
+  const tokens: Token[] = [];
+  for (const w of words) {
+    const emote = emoteByName.get(w) ?? null;
+    const previous = tokens[tokens.length - 1];
+    if (emote?.zeroWidth && previous && !previous.overlay) {
+      previous.overlay = emote;
+      continue;
+    }
+    if (!(emote || CURATED_EMOTES[w] || readEmoji(w))) continue;
+    if (tokens.some((t) => t.text === w && !t.overlay)) continue;
+    tokens.push({ text: w, emote });
+  }
+  return tokens;
 }
 
 function speciesCost(pending: PendingSpecies): number {

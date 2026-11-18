@@ -104,6 +104,8 @@ export interface Genome {
   emote: EmoteRef | null;
   /** Set when chat sent an emoji. It is drawn as the face. */
   emoji: string | null;
+  /** A 7TV zero-width emote layered on top of the face. */
+  overlay: EmoteRef | null;
   /** Null for invented words, Wilds, numbers, and curated archetypes. */
   meaning: Meaning | null;
   element: Element | null;

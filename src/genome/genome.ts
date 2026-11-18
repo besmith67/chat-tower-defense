@@ -20,6 +20,8 @@ import { wildName } from './wildNames';
 export interface GenomeOptions {
   source?: MonsterSource;
   emote?: EmoteRef | null;
+  /** A zero-width emote layered on top, with its name. */
+  overlay?: (EmoteRef & { name: string }) | null;
 }
 
 /** Returns null for empty or blocked tokens. Blocked tokens never spawn anything. */
@@ -35,7 +37,8 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   if (emoji) norm.raw = emoji.glyph;
 
   const archetype = norm.number !== null ? CURATED_NUMBERS[norm.number] : CURATED_EMOTES[norm.raw.replace(/[!?.]+$/, '')];
-  const key = speciesKey(source, norm, emote) + (emoji ? `|emoji:${emoji.glyph}` : '');
+  const overlay = source === 'chat' ? options.overlay ?? null : null;
+  const key = speciesKey(source, norm, emote) + (emoji ? `|emoji:${emoji.glyph}` : '') + (overlay ? `|over:${overlay.provider}#${overlay.id}` : '');
   const seed = fnv1a(key);
   const rng = mulberry32(seed);
 
@@ -85,13 +88,15 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     if (!quirks.includes('cyber')) quirks.push('cyber');
   }
 
-  const superlative = affix === 'mega' || affix === 'est';
+  // A layered emote is a layered monster: rarer, and the top layer can recolor its element.
+  const superlative = affix === 'mega' || affix === 'est' || overlay !== null;
   const elite = archetype?.elite ?? ((superlative || meaning?.rare || (form.letterValue >= 4.2 && form.length >= 3)) && swarm === 1);
   let weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
   if (image?.silhouette === 'wide') weights = jitter({ ...weights, hp: weights.hp + 0.06, speed: weights.speed - 0.04 }, rng, 0);
   if (image?.silhouette === 'tall') weights = jitter({ ...weights, speed: weights.speed + 0.05 }, rng, 0);
   // For emotes the palette picks the element, as the image is what chat sees.
   let element = image?.element ?? word?.element ?? null;
+  if (overlay) element = overlayElement(overlay) ?? element;
   // Flipping heat flips the element too: "unfire" is frost.
   if (affix === 'un' && meaning && word && meaning.axes.heat !== word.axes.heat) element = element === 'fire' ? 'frost' : element === 'frost' ? 'fire' : element;
 
@@ -113,6 +118,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     archetype: archetype?.title ?? null,
     emote,
     emoji: emoji?.glyph ?? null,
+    overlay: overlay ? { provider: overlay.provider, id: overlay.id, url: overlay.url } : null,
     meaning,
     element,
     family: word && meaning?.pos === 'n' ? word.family : named?.prefixFamily ?? null,
@@ -268,6 +274,15 @@ function makeLook(
     points: 5 + Math.floor(rng() * 4),
     phase: rng() * Math.PI * 2,
   };
+}
+
+/** A zero-width overlay's element: from its image if analyzed, otherwise from its name ("RainTime" reads as rain). */
+function overlayElement(overlay: EmoteRef & { name: string }): Element | null {
+  const genes = getEmoteGenes(overlay.id);
+  if (genes?.element) return genes.element;
+  const parts = splitEmoteName(overlay.name);
+  const word = lookupWord((parts?.prefix ?? overlay.name).toLowerCase()) ?? (parts ? lookupWord(parts.suffix.toLowerCase()) : null);
+  return word?.element ?? null;
 }
 
 /** An analyzed emote's body takes the emote's own dominant color. */

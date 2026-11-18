@@ -894,7 +894,8 @@ export class GameScene extends Phaser.Scene {
       const attach = () => {
         if (!root.active || face) return;
         face = this.add.image(g.look.radius * 0.08, -g.look.radius * 0.05, key).setDisplaySize(g.look.radius * 1.45, g.look.radius * 1.45);
-        bodyRoot.add(face);
+        // Right above the body sprite, so a zero-width overlay always stays on top.
+        bodyRoot.addAt(face, 1);
         const v = this.monsterViews.get(m.id);
         if (v) v.face = face;
       };
@@ -902,6 +903,21 @@ export class GameScene extends Phaser.Scene {
       else {
         this.ensureEmote(g.emote);
         this.load.once(`filecomplete-image-${key}`, attach);
+      }
+    }
+
+    if (g.overlay) {
+      // Zero-width emotes sit on top of the face, a little larger, the way 7TV draws them.
+      const key = this.emoteKey(g.overlay);
+      const size = g.look.radius * 1.9;
+      const attachOverlay = () => {
+        if (!root.active) return;
+        bodyRoot.add(this.add.image(g.look.radius * 0.08, -g.look.radius * 0.1, key).setDisplaySize(size, size));
+      };
+      if (this.textures.exists(key)) attachOverlay();
+      else {
+        this.ensureEmote(g.overlay);
+        this.load.once(`filecomplete-image-${key}`, () => this.time.delayedCall(0, attachOverlay));
       }
     }
 

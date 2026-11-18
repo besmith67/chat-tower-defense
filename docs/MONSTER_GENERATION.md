@@ -236,7 +236,7 @@ Rarer monsters are stronger and cost more of the wave budget.
 
 ### Zero-width emotes
 
-7TV zero-width emotes overlay the emote before them. They become modifier genes on that monster, such as a hat, rain, or flames. A layered emote is literally a layered monster.
+7TV zero-width emotes overlay the emote before them. They become modifier genes on that monster, such as a hat, rain, or flames. A layered emote is literally a layered monster. Shipped: the layered monster is a separate species, an elite, takes the overlay's element, and wears the overlay image.
 
 ### Curated archetypes
 
