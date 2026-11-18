@@ -18,7 +18,7 @@ export interface MonsterTexture {
 const cache = new Map<string, MonsterTexture>();
 
 export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterTexture {
-  const key = `mon:${genome.key}:${genome.look.radius.toFixed(1)}`;
+  const key = `mon:${genome.key}:${genome.look.radius.toFixed(1)}:${genome.look.hue}:${genome.form.sharpness.toFixed(2)}`;
   const cached = cache.get(key);
   if (cached && scene.textures.exists(key)) return cached;
 

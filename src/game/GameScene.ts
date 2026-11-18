@@ -6,7 +6,8 @@ import Phaser from 'phaser';
 import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
 import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
-import { FAMILY_INFO, QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
+import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emoteGenes';
+import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import { Match } from '../sim/match';
@@ -123,6 +124,9 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.onPointerMove(p));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onPointerDown(p));
     this.load.on('loaderror', (file: Phaser.Loader.File) => this.failedEmotes.add(file.key));
+    this.load.on('filecomplete', (key: string) => {
+      if (key.startsWith('emote:')) this.analyzeEmote(key);
+    });
 
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener('keydown', this.keyHandler);
@@ -167,6 +171,28 @@ export class GameScene extends Phaser.Scene {
 
   private emoteKey(emote: EmoteRef | ChatEmote): string {
     return `emote:${emote.provider}:${emote.id}`;
+  }
+
+  /**
+   * Reads an emote's pixels once so its palette and outline can shape the species (Layer 6).
+   * Images from hosts without cross-origin access cannot be read and keep their name-only genes.
+   */
+  private analyzeEmote(key: string): void {
+    const id = key.split(':').slice(2).join(':');
+    if (getEmoteGenes(id)) return;
+    try {
+      const source = this.textures.get(key).getSourceImage() as CanvasImageSource;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 32;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.drawImage(source, 0, 0, 32, 32);
+      setEmoteGenes(id, analyzeEmotePixels(ctx.getImageData(0, 0, 32, 32).data, 32, 32));
+      this.match.collector.refreshEmotes();
+      this.refreshPanel();
+    } catch {
+      // Tainted canvas: the host does not allow reading pixels.
+    }
   }
 
   private ensureEmote(emote: EmoteRef | ChatEmote): void {
@@ -471,6 +497,8 @@ export class GameScene extends Phaser.Scene {
     let y = 512;
     const meaning = meaningText(g);
     if (meaning) y += add(this.add.text(x, y, meaning, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
+    const image = imageText(g);
+    if (image) y += add(this.add.text(x, y, image, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
     y += add(this.add.text(x, y, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91)).height + 6;
 
     const bars: [string, number, number][] = [

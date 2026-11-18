@@ -9,6 +9,7 @@ import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
 import { flipStrongest, parseWord, type ParsedWord } from './affixes';
 import { EMOTE_SUFFIXES, splitEmoteName } from './emoteName';
 import { readEmoji } from './emoji';
+import { getEmoteGenes, type EmoteGenes } from './emoteGenes';
 import { lookupWord } from './lexicon';
 import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
@@ -39,6 +40,9 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   const rng = mulberry32(seed);
 
   const form = readForm(norm.root, norm.letters);
+  // An emote's outline counts as much as its name's sound.
+  const image: EmoteGenes | undefined = emote ? getEmoteGenes(emote.id) : undefined;
+  if (image?.sharpness != null) form.sharpness = 0.5 * form.sharpness + 0.5 * image.sharpness;
   const formClass: FormClass = form.sharpness > 0.25 ? 'spiky' : form.sharpness < -0.25 ? 'round' : 'balanced';
   const quirks = archetype ? [...archetype.quirks] : surfaceQuirks(norm, form);
   if (archetype) addSurfaceMood(norm, quirks);
@@ -83,8 +87,11 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
 
   const superlative = affix === 'mega' || affix === 'est';
   const elite = archetype?.elite ?? ((superlative || meaning?.rare || (form.letterValue >= 4.2 && form.length >= 3)) && swarm === 1);
-  const weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
-  let element = word?.element ?? null;
+  let weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
+  if (image?.silhouette === 'wide') weights = jitter({ ...weights, hp: weights.hp + 0.06, speed: weights.speed - 0.04 }, rng, 0);
+  if (image?.silhouette === 'tall') weights = jitter({ ...weights, speed: weights.speed + 0.05 }, rng, 0);
+  // For emotes the palette picks the element, as the image is what chat sees.
+  let element = image?.element ?? word?.element ?? null;
   // Flipping heat flips the element too: "unfire" is frost.
   if (affix === 'un' && meaning && word && meaning.axes.heat !== word.axes.heat) element = element === 'fire' ? 'frost' : element === 'frost' ? 'fire' : element;
 
@@ -101,7 +108,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     punctuation: norm.punctuation,
     quirks: dedupe(quirks),
     weights,
-    look: makeLook(form, source, elite, archetype, swarm, meaning, element, rng),
+    look: withImageHue(makeLook(form, source, elite, archetype, swarm, meaning, element, rng), image),
     swarm,
     archetype: archetype?.title ?? null,
     emote,
@@ -261,6 +268,11 @@ function makeLook(
     points: 5 + Math.floor(rng() * 4),
     phase: rng() * Math.PI * 2,
   };
+}
+
+/** An analyzed emote's body takes the emote's own dominant color. */
+function withImageHue(look: Look, image: EmoteGenes | undefined): Look {
+  return image?.hue != null ? { ...look, hue: image.hue } : look;
 }
 
 /** Element sets the body color so the counter reads at a glance. */

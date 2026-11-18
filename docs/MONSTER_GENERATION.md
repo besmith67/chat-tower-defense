@@ -210,7 +210,8 @@ Twitch global emotes, Twitch channel emotes, 7TV, BTTV, FFZ, YouTube channel emo
 - **Palette.** The dominant colors pick the element. Red and orange lean fire, blue leans ice, green leans nature or poison, yellow leans storm, purple leans arcane, gray leans metal, and very dark images lean shadow.
 - **Silhouette.** The transparency mask sets the hitbox and movement style. Wide shapes crawl, tall shapes walk, and round shapes roll.
 - **Edge sharpness.** Jagged outlines push toward spiky form. Smooth outlines push toward round form.
-- **Animation.** Animated emotes are phasing monsters. Frame count sets the rhythm of their ability.
+- **Animation.** Animated emotes are phasing monsters. Frame count sets the rhythm of their ability. (Not built: a canvas only sees the first frame.)
+- **Shipped.** The game reads each emote's image once at 32 by 32 pixels. Palette sets the element and the body color; a mostly gray image is Stone and a mostly dark one is Spirit. Outline roughness is averaged with the name's sound to set the form, but only when the emote has a transparent background. Wide silhouettes get more health and tall ones more speed. The inspect panel says what the image contributed.
 - **The emote is the face.** The image is drawn onto the generated body, so every monster looks like the emote chat typed.
 
 ### Reading the emote name

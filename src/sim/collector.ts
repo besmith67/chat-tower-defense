@@ -18,6 +18,8 @@ export interface Contribution {
 
 export interface PendingSpecies {
   genome: Genome;
+  /** The token as chat typed it, so the genome can be rebuilt when an emote's image is analyzed. */
+  text: string;
   contributions: Contribution[];
   firstAt: number;
 }
@@ -95,7 +97,7 @@ export class SpawnCollector {
       const existing = this.species.get(genome.key);
       if (existing) existing.contributions.push(contribution);
       else {
-        this.species.set(genome.key, { genome, contributions: [contribution], firstAt: message.at });
+        this.species.set(genome.key, { genome, text: token.text, contributions: [contribution], firstAt: message.at });
         this.trimBacklog();
       }
       this.perUser.set(message.userId, used + 1);
@@ -108,7 +110,20 @@ export class SpawnCollector {
    * Builds the wave. Species that do not fit the budget carry over to the next wave, so a viewer's
    * word is delayed rather than lost. Per-viewer caps reset for the new window.
    */
+  /**
+   * Rebuilds pending emote species, picking up image analysis that finished after chat first sent
+   * them. The species key never changes, only its look and stats.
+   */
+  refreshEmotes(): void {
+    for (const pending of this.species.values()) {
+      if (!pending.genome.emote) continue;
+      const fresh = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote });
+      if (fresh && fresh.key === pending.genome.key) pending.genome = fresh;
+    }
+  }
+
   takeWave(budget: number, mode: ChatMode, rng: Rng): WavePlan {
+    this.refreshEmotes();
     const orders: SpawnOrder[] = [];
     let remaining = budget;
     let chatThreat = 0;
@@ -132,7 +147,7 @@ export class SpawnCollector {
       while (remaining >= BALANCE.unitCost) {
         const genome = makeWildGenome(rng);
         const packSize = 1 + Math.floor(rng() * 3);
-        const pending: PendingSpecies = { genome, contributions: [], firstAt: 0 };
+        const pending: PendingSpecies = { genome, text: genome.token, contributions: [], firstAt: 0 };
         for (let i = 0; i < packSize && remaining >= BALANCE.unitCost; i++) {
           const spent = planSpecies(pending, remaining, orders);
           remaining -= spent;
