@@ -263,10 +263,13 @@ for (const word of [...candidates].sort()) {
     if (nudged && !inherit(top!.key)) stats.glossOnly++;
   }
 
+  // Family is a body plan, so only words used mainly as nouns get one from WordNet.
   let family: Family | null = seed?.family ?? null;
-  if (!family && info?.top.n) family = NOUN_FAMILY[synsets.get(info.top.n.key)?.lex ?? -1] ?? (pos[0] === 'n' ? 'abstract' : null);
+  if (!family && pos[0] === 'n' && info?.top.n) family = NOUN_FAMILY[synsets.get(info.top.n.key)?.lex ?? -1] ?? 'abstract';
 
-  words[word] = encodeEntry(pos, family, element, zipfOf(word), axes);
+  // Chat slang is missing from the subtitle counts but is common in chat, so seeds are never rare.
+  const zipf = seed ? Math.max(zipfOf(word), 4) : zipfOf(word);
+  words[word] = encodeEntry(pos, family, element, zipf, axes);
   stats.total++;
   if (family) stats.families[family] = (stats.families[family] ?? 0) + 1;
   if (element) stats.elements[element] = (stats.elements[element] ?? 0) + 1;

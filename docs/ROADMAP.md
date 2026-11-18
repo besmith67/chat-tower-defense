@@ -59,12 +59,13 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** Common words resolve with sensible family and part of speech, the JSON stays under about 400 KB, and tests cover the lookup.
 - **Result.** 34,445 words, 328 KB (142 KB gzipped). Families come from WordNet lexicographer files. Lookup handles plurals, -ing, -ed, and stretched letters. Irregular forms (wolves, ran) are not handled. Only 18 anchor seeds so far, so most words have neutral axes until M2.2.
 
-### M2.2 Curated meaning seeds: todo
+### M2.2 Curated meaning seeds: done
 
 - **Depends on.** M2.1.
 - **Goal.** Hand-scored axes and elements for the words chat actually types: about 600 core nouns, verbs, and adjectives, plus Twitch slang (pog, sus, ratio, gg, based, cringe, bussin, and so on).
 - **Build.** Extend `data/lexicon/seeds.tsv`. The format is in the file header. Synonyms in WordNet inherit seeded scores at build time, so seed the clearest word of each cluster.
 - **Done when.** The worked examples in MONSTER_GENERATION.md read correctly (`snail` slow and hard, `rocket` fast and hot, `ghost` quiet and dead, `avalanche` fast, huge, cold, chaotic).
+- **Result.** 509 seeds. 8,142 more words inherit through WordNet and 2,746 get gloss nudges. Seeded slang is never rare. Common irregular forms (wolves, mice, ran) are handled. Room to grow: more slang, emote suffixes for M3.1, and more verbs once M2.6 picks its ability list.
 
 ### M2.3 Layer 3: meaning drives stats and element: todo
 

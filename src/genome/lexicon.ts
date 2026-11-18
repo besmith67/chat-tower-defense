@@ -27,6 +27,18 @@ export function lexiconSize(): number {
   return words().size;
 }
 
+/** Irregular forms chat is likely to type. Morphy's exception lists are much longer; add as needed. */
+const IRREGULAR: Record<string, [string, string]> = {
+  wolves: ['wolf', 'plural'], knives: ['knife', 'plural'], leaves: ['leaf', 'plural'], lives: ['life', 'plural'],
+  mice: ['mouse', 'plural'], geese: ['goose', 'plural'], teeth: ['tooth', 'plural'], feet: ['foot', 'plural'],
+  children: ['child', 'plural'], people: ['person', 'plural'], men: ['man', 'plural'], women: ['woman', 'plural'],
+  elves: ['elf', 'plural'], dwarves: ['dwarf', 'plural'], cacti: ['cactus', 'plural'], fungi: ['fungus', 'plural'],
+  ran: ['run', 'past'], ate: ['eat', 'past'], flew: ['fly', 'past'], froze: ['freeze', 'past'], frozen: ['freeze', 'past'],
+  dug: ['dig', 'past'], hid: ['hide', 'past'], stole: ['steal', 'past'], threw: ['throw', 'past'], bit: ['bite', 'past'],
+  fought: ['fight', 'past'], swam: ['swim', 'past'], slept: ['sleep', 'past'], grew: ['grow', 'past'], died: ['die', 'past'],
+  better: ['good', 'comparative'], best: ['good', 'superlative'], worse: ['bad', 'comparative'], worst: ['bad', 'superlative'],
+};
+
 /** Suffix rules from WordNet's morphy, in order. Each maps an inflected ending to a base ending. */
 const INFLECTIONS: [string, string, string][] = [
   ['ies', 'y', 'plural'], ['ses', 's', 'plural'], ['xes', 'x', 'plural'], ['zes', 'z', 'plural'],
@@ -47,6 +59,11 @@ export function lookupWord(root: string, letters: string = root): WordInfo | nul
 
   for (const word of tries) {
     const exact = table.get(word);
+    const irregular = IRREGULAR[word];
+    if (irregular && !exact) {
+      const base = table.get(irregular[0]);
+      if (base) return { ...decodeEntry(base), lemma: irregular[0], inflection: irregular[1] };
+    }
     if (!exact) continue;
     const info: WordInfo = { ...decodeEntry(exact), lemma: word, inflection: null };
     // WordNet lists many gerunds as their own nouns ("digging"). Chat means the verb, so prefer

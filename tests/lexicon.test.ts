@@ -34,7 +34,8 @@ describe('lookupWord', () => {
 
   it('undoes common inflections', () => {
     expect(lookupWord('foxes')).toMatchObject({ lemma: 'fox', inflection: 'plural' });
-    expect(lookupWord('wolves')).toBeNull(); // irregular plurals are not handled yet
+    expect(lookupWord('wolves')?.lemma).toBe('wolf');
+    expect(lookupWord('mice')?.lemma).toBe('mouse');
     expect(lookupWord('digging')?.lemma).toBe('dig');
     expect(lookupWord('explodes')?.lemma).toBe('explode');
   });
@@ -46,6 +47,36 @@ describe('lookupWord', () => {
   it('knows nothing about invented words', () => {
     expect(lookupWord('vorlag')).toBeNull();
     expect(lookupWord('grubbok')).toBeNull();
+  });
+
+  it('gives verbs no body plan', () => {
+    expect(lookupWord('dig')?.pos[0]).toBe('v');
+    expect(lookupWord('dig')?.family).toBeNull();
+  });
+
+  it('never marks seeded slang as rare', () => {
+    expect(lookupWord('pog')!.zipf).toBeGreaterThanOrEqual(4);
+  });
+
+  it('spreads seed meanings to synonyms and neighbors', () => {
+    expect(lookupWord('inferno')!.element).toBe('fire');
+    expect(lookupWord('scooter')!.axes.speed).toBeGreaterThan(0);
+    expect(lookupWord('puppies')!.axes.mood).toBeLessThan(0);
+  });
+
+  it('matches the worked examples', () => {
+    const snail = lookupWord('snail')!;
+    const rocket = lookupWord('rocket')!;
+    expect(snail.axes.speed).toBeLessThan(0);
+    expect(snail.axes.hardness).toBeGreaterThan(0);
+    expect(rocket.axes.speed).toBeGreaterThan(0);
+    expect(rocket.element).toBe('fire');
+    expect(lookupWord('ghost')).toMatchObject({ element: 'spirit' });
+    expect(lookupWord('ghost')!.axes.life).toBeLessThan(0);
+    const avalanche = lookupWord('avalanche')!;
+    expect(avalanche.element).toBe('frost');
+    expect(avalanche.axes.mass).toBeGreaterThan(1);
+    expect(avalanche.axes.order).toBeGreaterThan(1);
   });
 
   it('reads meaning from the seeds', () => {
