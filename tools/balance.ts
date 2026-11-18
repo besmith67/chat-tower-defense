@@ -5,7 +5,7 @@
  */
 import { BALANCE } from '../src/sim/balance';
 import { COLS, ROWS, TILE } from '../src/sim/map';
-import { Match } from '../src/sim/match';
+import { Match, type Phase } from '../src/sim/match';
 import { TOWERS, type TowerId } from '../src/sim/towers';
 
 type Strategy = 'smart' | 'needles' | 'lazy';
@@ -59,10 +59,12 @@ for (let i = 0; i < runs; i++) {
       match.startWave();
     } else {
       match.update(1 / 30);
-      if (match.phase === 'build' || match.phase === 'won' || match.phase === 'lost') {
-        const arr = livesByWave.get(match.wave - (match.phase === 'build' ? 1 : 0)) ?? [];
+      const phase: Phase = match.phase;
+      if (phase !== 'wave') {
+        const finished = match.wave - (phase === 'build' ? 1 : 0);
+        const arr = livesByWave.get(finished) ?? [];
         arr.push(match.world.lives);
-        livesByWave.set(match.wave - (match.phase === 'build' ? 1 : 0), arr);
+        livesByWave.set(finished, arr);
       }
     }
   }
