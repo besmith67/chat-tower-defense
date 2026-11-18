@@ -58,7 +58,7 @@ export interface Look {
 }
 
 export interface EmoteRef {
-  provider: 'twitch' | '7tv' | 'bttv' | 'ffz';
+  provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick';
   id: string;
   url: string;
 }

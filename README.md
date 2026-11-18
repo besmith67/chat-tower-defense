@@ -9,7 +9,7 @@ Viewers on Twitch spam words and emotes. Every word becomes a monster shaped by 
 ## How to play
 
 1. Pick who sends monsters. **Blended** mixes chat and the Wilds. **Chat only** is for busy chats. **Offline practice** uses only the Wilds.
-2. Enter your Twitch channel name. Reading chat needs no login.
+2. Enter your Twitch channel name, your Kick channel, or both. Reading chat needs no login.
 3. Optional: open the **Emote Studio** to see what each of your channel's emotes becomes. Rename them, disable ones you don't want, give them a signature ability, or mark boss candidates. Choices are saved in your browser.
 4. During each build phase, chat types single words or emotes. They appear in the panel on the right.
 5. Build towers that counter what is coming, then start the wave.
@@ -39,10 +39,13 @@ Every fifth wave is a boss wave. Chat votes with `!vote 1`, `!vote 2`, or `!vote
 | 1 to 5 | Pick a tower to build |
 | Click | Build, or select a tower |
 | Esc or right click | Cancel |
+| U | Upgrade the selected tower (two levels; level 3 adds a perk) |
 | S | Sell the selected tower |
 | Space | Start the wave early |
 | F | Cycle game speed |
 | B | Open the bestiary |
+| M | Mute or unmute |
+| H | Show or hide the "how chat plays" card for viewers |
 | \` | Open the test chat box to type as if you were chat |
 
 ### URL options
@@ -53,7 +56,7 @@ Skip the setup screen by adding options to the URL. This is handy for an OBS bro
 ?channel=yourname&mode=blended&names=1&autostart=1
 ```
 
-`mode` is `blended`, `chat-only`, or `offline`. `names=0` hides viewer names.
+`mode` is `blended`, `chat-only`, or `offline`. `map` is `switchback`, `twin`, or `spiral`. `names=0` hides viewer names.
 
 ## How chat words become monsters
 

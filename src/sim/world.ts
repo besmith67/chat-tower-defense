@@ -7,8 +7,8 @@ import { BALANCE } from './balance';
 import type { SpawnOrder } from './collector';
 import { elementMultiplier } from './elements';
 import { JAM_EVERY, JAM_RANGE, JAM_SECONDS, sabotageTarget } from './sabotage';
-import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
-import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
+import { createMap, getMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
+import { armorFactor, formMultiplier, TOWERS, towerAtLevel, upgradeCost, type TowerDef, type TowerId } from './towers';
 
 export interface Monster {
   id: number;
@@ -58,6 +58,8 @@ export interface Tower {
   /** Kills per species key. Towers adapt to what they kill often. */
   kills: Map<string, number>;
   spent: number;
+  /** 1 to MAX_LEVEL. def holds the stats for this level. */
+  level: number;
 }
 
 export type Effectiveness = 'strong' | 'weak' | 'normal';
@@ -90,7 +92,7 @@ interface QueuedSpawn {
 }
 
 export class World {
-  readonly map: GameMap = createMap();
+  readonly map: GameMap;
   monsters: Monster[] = [];
   towers: Tower[] = [];
   gold: number;
@@ -103,9 +105,10 @@ export class World {
   readonly leaksBySpecies = new Map<string, number>();
   private nextId = 1;
 
-  constructor(gold: number = BALANCE.startingGold, lives: number = BALANCE.startingLives) {
+  constructor(gold: number = BALANCE.startingGold, lives: number = BALANCE.startingLives, mapId?: string) {
     this.gold = gold;
     this.lives = lives;
+    this.map = createMap(getMap(mapId));
   }
 
   /** True when the current wave has nothing left to spawn and nothing alive. */
@@ -155,6 +158,7 @@ export class World {
       stunnedUntil: 0,
       kills: new Map(),
       spent: def.cost,
+      level: 1,
     };
     this.towers.push(tower);
     return tower;
@@ -162,6 +166,18 @@ export class World {
 
   towerAt(col: number, row: number): Tower | undefined {
     return this.towers.find((t) => t.col === col && t.row === row);
+  }
+
+  /** Raises a tower one level. Returns false at max level or without enough gold. */
+  upgradeTower(tower: Tower): boolean {
+    const base = TOWERS[tower.def.id];
+    const cost = upgradeCost(base, tower.level);
+    if (cost === null || this.gold < cost) return false;
+    this.gold -= cost;
+    tower.spent += cost;
+    tower.level++;
+    tower.def = towerAtLevel(base, tower.level);
+    return true;
   }
 
   sellTower(tower: Tower): number {
@@ -191,7 +207,7 @@ export class World {
     const w = genome.weights;
     const power = order.power * BALANCE.wavePower(this.wave);
     const family = genome.family;
-    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp)) * (family === 'place' ? 1.15 : 1);
+    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp)) * (family === 'place' ? 1.15 : 1) * this.map.def.toughness;
     const cyber = genome.quirks.includes('cyber') ? 0.15 : 0;
     const plating = family === 'construct' ? 0.08 : 0;
     const pos = this.map.paths[portal].pointAt(dist);

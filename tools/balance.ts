@@ -15,7 +15,7 @@ import { BALANCE } from '../src/sim/balance';
 import { COLS, ROWS, TILE } from '../src/sim/map';
 import { Match, type Phase } from '../src/sim/match';
 import { elementMultiplier } from '../src/sim/elements';
-import { TOWERS, type TowerId } from '../src/sim/towers';
+import { TOWERS, upgradeCost, type TowerId } from '../src/sim/towers';
 import type { Genome } from '../src/genome';
 
 type Strategy = 'smart' | 'worst' | 'blind' | 'needles' | 'lazy';
@@ -49,7 +49,9 @@ function coverage(match: Match, col: number, row: number, range: number): number
   const x = col * TILE + TILE / 2;
   const y = row * TILE + TILE / 2;
   let score = 0;
-  for (const path of Object.values(match.world.map.paths)) {
+  // Offline, only the Wilds portal sends monsters, so only its road is worth covering.
+  const paths = chatMode ? Object.values(match.world.map.paths) : [match.world.map.paths.wilds];
+  for (const path of paths) {
     for (let d = 0; d < path.length; d += 10) {
       const p = path.pointAt(d);
       if (Math.hypot(p.x - x, p.y - y) <= range) score++;
@@ -91,9 +93,25 @@ function nextTower(match: Match, step: number): TowerId {
 
 const DAMAGE_SLOTS: TowerId[] = ['needle', 'flame', 'tesla'];
 
+/** After this many towers, gold goes to upgrades (strategies other than needles and lazy). Set TOWER_CAP=14 to test upgrades. */
+const TOWER_CAP = Number(process.env.TOWER_CAP ?? 99);
+
+function upgradeOne(match: Match): boolean {
+  const options = match.world.towers
+    .map((t) => ({ t, cost: upgradeCost(TOWERS[t.def.id], t.level) }))
+    .filter((o): o is { t: (typeof match.world.towers)[number]; cost: number } => o.cost !== null && o.cost <= match.world.gold)
+    .sort((a, b) => a.t.level - b.t.level || a.cost - b.cost);
+  return options.length > 0 && match.upgradeTower(options[0].t);
+}
+
 function build(match: Match, step: number): void {
   const reserve = strategy === 'lazy' ? match.world.gold / 2 : 0;
+  const upgrades = strategy !== 'needles' && strategy !== 'lazy';
   for (;;) {
+    if (upgrades && match.world.towers.length >= TOWER_CAP) {
+      if (!upgradeOne(match)) return;
+      continue;
+    }
     const id = nextTower(match, step);
     const def = TOWERS[id];
     if (match.world.gold - def.cost < reserve || match.world.gold < def.cost) return;
@@ -115,7 +133,7 @@ const towerTally: Record<string, number> = {};
 const leaks = new Map<string, { count: number; lives: number }>();
 const livesByWave = new Map<number, number[]>();
 for (let i = 0; i < runs; i++) {
-  const match = new Match({ mode: chatMode ? 'blended' : 'offline', seed: 1000 + i });
+  const match = new Match({ mode: chatMode ? 'blended' : 'offline', seed: 1000 + i, map: process.env.MAP });
   let lastWave = 0;
   while (match.phase === 'build' || match.phase === 'wave') {
     if (match.phase === 'build') {

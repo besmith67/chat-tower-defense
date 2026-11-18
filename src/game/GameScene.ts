@@ -7,17 +7,18 @@ import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
 import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
 import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emoteGenes';
-import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
+import { ELEMENT_INFO, FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
-import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
+import { COLS, ROWS, TILE, tileKey } from '../sim/map';
 import type { WavePlan } from '../sim/collector';
 import type { CrowdEvent } from '../sim/crowd';
 import { Bestiary } from '../sim/bestiary';
 import { openBestiary } from '../studio/bestiaryView';
 import { Match } from '../sim/match';
 import { sabotageTarget } from '../sim/sabotage';
-import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
+import { LEVEL3_PERK, MAX_LEVEL, TOWERS, TOWER_ORDER, upgradeCost, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
+import { AudioBus } from './audio';
 import { monsterTexture, towerTextures } from './monsterArt';
 import type { GameSettings } from './settings';
 import { COLORS, FONT, LAYOUT } from './theme';
@@ -96,7 +97,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = this.registry.get('settings');
     this.hub = this.registry.get('hub');
     setStreamerBlocklist(this.settings.blocklist);
-    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel) });
+    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel), map: this.settings.map });
     this.match.collector.setShowNames(this.settings.showNames);
     this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
@@ -138,8 +139,11 @@ export class GameScene extends Phaser.Scene {
     window.addEventListener('keydown', this.keyHandler);
     this.unsubscribe = this.hub.on((e) => this.onChat(e));
     this.registry.set('match', this.match);
+    if (this.settings.mode !== 'offline') this.toggleHowTo(true);
 
+    this.audio = new AudioBus();
     this.events.once('shutdown', () => {
+      this.audio.stop();
       this.unsubscribe?.();
       if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
     });
@@ -154,7 +158,11 @@ export class GameScene extends Phaser.Scene {
       this.shownPlan = this.match.lastPlan;
       this.showCrowd(this.match.lastPlan.crowd);
       this.match.bestiary.save(this.settings.channel);
+      this.audio.play('wave');
+      if (this.match.wave === 1) this.toggleHowTo(false);
+      if (this.match.lastPlan.crowd.length) this.time.delayedCall(300, () => this.audio.play('crowd'));
     }
+    this.audio.setIntensity(this.match.phase === 'wave');
     this.syncMonsters();
     this.syncStuns();
     this.drawGhost();
@@ -268,8 +276,8 @@ export class GameScene extends Phaser.Scene {
     this.add.text(sx(wp.x) + 2, sy(wp.y) + 34, 'WILDS', text({ fontSize: '13px', color: COLORS.wildsText, fontStyle: 'bold' })).setOrigin(0, 0).setDepth(2);
 
     // Base.
-    const bx = sx(BASE_TILE[0] * TILE + TILE / 2);
-    const by = sy(BASE_TILE[1] * TILE + TILE / 2);
+    const bx = sx(this.match.world.map.base.x);
+    const by = sy(this.match.world.map.base.y);
     g.fillStyle(0xffffff, 1);
     g.fillRoundedRect(bx - 19, by - 16, 38, 34, 6);
     for (let i = 0; i < 3; i++) g.fillRect(bx - 19 + i * 14, by - 24, 10, 10);
@@ -324,13 +332,13 @@ export class GameScene extends Phaser.Scene {
       this.hud.split.setText(`Chat ${chat}% · Wilds ${100 - chat}%`);
     }
 
-    const twitch = this.hub.statuses.get('twitch');
     const rate = this.hub.messagesPerMinute();
     const emoteCount = this.hub.emotes?.size ?? 0;
-    if (twitch) {
-      const dot = twitch.status === 'connected' ? '●' : '○';
-      this.hud.status.setText(`Twitch ${twitch.detail || ''} ${dot} ${twitch.status}  ·  ${rate} msg/min  ·  ${emoteCount} emotes`);
-      this.hud.status.setColor(twitch.status === 'connected' ? COLORS.chatText : COLORS.muted);
+    const live = (['twitch', 'kick'] as const).map((p) => this.hub.statuses.get(p)).filter((s) => !!s);
+    if (live.length) {
+      const parts = live.map((s) => `${s.platform === 'kick' ? 'Kick' : 'Twitch'} ${s.status === 'connected' ? '●' : '○'} ${s.status === 'error' ? s.detail : s.status}`);
+      this.hud.status.setText(`${parts.join('  ')}  ·  ${rate} msg/min${emoteCount ? `  ·  ${emoteCount} emotes` : ''}`);
+      this.hud.status.setColor(live.some((s) => s.status === 'connected') ? COLORS.chatText : COLORS.muted);
     } else {
       this.hud.status.setText(`No channel · test chat (\`)  ·  ${rate} msg/min`);
     }
@@ -409,7 +417,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 12, LAYOUT.height - 12, 'U upgrade · S sell · F speed · B bestiary · H help · M mute', text({ fontSize: '10px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -489,7 +497,7 @@ export class GameScene extends Phaser.Scene {
         this.panelRows.push(this.add.image(x + 12, y + 12, this.emoteKey(p.genome.emote)).setDisplaySize(20, 20).setDepth(92).setAlpha(alpha));
       }
       const copies = p.contributions.length;
-      this.panelRows.push(this.add.text(x + 32, y + 3, p.genome.token, text({ fontSize: '15px', fontStyle: 'bold' })).setDepth(91).setAlpha(alpha));
+      this.panelRows.push(this.add.text(x + 32, y + 3, p.genome.token.length > 16 ? p.genome.token.slice(0, 15) + '…' : p.genome.token, text({ fontSize: '15px', fontStyle: 'bold' })).setDepth(91).setAlpha(alpha));
       const right = waiting ? 'waiting' : copies > 1 ? `×${copies}` : '';
       if (right) {
         this.panelRows.push(
@@ -514,7 +522,7 @@ export class GameScene extends Phaser.Scene {
     if (this.hoveredMonster && !this.hoveredMonster.alive) this.hoveredMonster = null;
     const monster = this.hoveredMonster ?? (this.selectedTower ? null : this.spotlight);
     const tower = this.hoveredMonster ? null : this.selectedTower;
-    const key = monster ? `m${monster.id}` : tower ? `t${tower.id}:${tower.kills.size}:${[...tower.kills.values()].join()}` : 'none';
+    const key = monster ? `m${monster.id}` : tower ? `t${tower.id}:${tower.level}:${this.match.world.gold >= (upgradeCost(TOWERS[tower.def.id], tower.level) ?? Infinity)}:${[...tower.kills.values()].join()}` : 'none';
     if (key === this.inspectKey) return;
     this.inspectKey = key;
     for (const o of this.inspectObjs) o.destroy();
@@ -582,10 +590,10 @@ export class GameScene extends Phaser.Scene {
   private inspectTower(t: Tower, x: number, add: <T extends Obj>(o: T) => T): void {
     add(this.add.text(x, 432, 'TOWER', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.muted })).setDepth(91));
     add(this.add.image(x + 22, 478, `tower-${t.def.id}`).setDepth(91));
-    add(this.add.text(x + 54, 460, t.def.name, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
+    add(this.add.text(x + 54, 460, `${t.def.name}  ${'★'.repeat(t.level)}${'☆'.repeat(MAX_LEVEL - t.level)}`, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
     add(this.add.text(x, 508, t.def.blurb, text({ fontSize: '12px', color: COLORS.muted, wordWrap: { width: 250 } })).setDepth(91));
     const kills = [...t.kills.values()].reduce((a, b) => a + b, 0);
-    add(this.add.text(x, 548, `Kills: ${kills}`, text({ fontSize: '13px' })).setDepth(91));
+    add(this.add.text(x, 548, `Kills: ${kills} · damage ${Math.round(t.def.damage)} · range ${Math.round(t.def.range)}`, text({ fontSize: '13px' })).setDepth(91));
     const top = [...t.kills.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
     let y = 568;
     if (top.length) {
@@ -598,8 +606,16 @@ export class GameScene extends Phaser.Scene {
         y += 16;
       }
     }
+    const cost = upgradeCost(TOWERS[t.def.id], t.level);
+    if (cost !== null) {
+      const perk = t.level === 2 ? ` (${LEVEL3_PERK[t.def.id]})` : '';
+      const afford = this.match.world.gold >= cost;
+      add(this.add.text(x, 644, `Press U to upgrade for ◆ ${cost}${perk}`, text({ fontSize: '13px', color: afford ? COLORS.strong : COLORS.muted, wordWrap: { width: 250 } })).setDepth(91));
+    } else {
+      add(this.add.text(x, 644, `Max level: ${LEVEL3_PERK[t.def.id]}`, text({ fontSize: '13px', color: COLORS.muted })).setDepth(91));
+    }
     const refund = Math.floor(t.spent * BALANCE.sellRefund);
-    add(this.add.text(x, 664, `Press S to sell for ◆ ${refund}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(91));
+    add(this.add.text(x, 680, `Press S to sell for ◆ ${refund}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(91));
   }
 
   // ---------------------------------------------------------------- input
@@ -617,8 +633,11 @@ export class GameScene extends Phaser.Scene {
       this.match.startWave();
     } else if (key === 'f') this.cycleSpeed();
     else if (key === 's' && this.selectedTower) this.sellSelected();
+    else if (key === 'u' && this.selectedTower) this.upgradeSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
     else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
+    else if (key === 'h') this.toggleHowTo();
+    else if (key === 'm') this.flash(this.audio.toggleMute() ? 'Sound off (M)' : 'Sound on (M)');
     else if (key === '`') {
       e.preventDefault();
       window.dispatchEvent(new Event('toggle-test-chat'));
@@ -678,7 +697,10 @@ export class GameScene extends Phaser.Scene {
       if (this.match.world.gold < def.cost) return this.flash('Not enough gold');
       if (!this.match.world.canPlace(col, row)) return this.flash("Can't build there");
       const tower = this.match.placeTower(this.selectedBuild, col, row);
-      if (tower) this.addTowerView(tower);
+      if (tower) {
+        this.addTowerView(tower);
+        this.audio.play('build');
+      }
       return;
     }
     const existing = this.match.world.towerAt(col, row);
@@ -686,7 +708,6 @@ export class GameScene extends Phaser.Scene {
     if (!existing && this.hoveredMonster) this.spotlight = this.hoveredMonster;
   }
 
-  /** Places a tower exactly like a click would. Used by scripted playtests. */
   /** An emoji drawn as text, centered, for monster faces and panel icons. */
   private emojiFace(x: number, y: number, glyph: string, size: number): Phaser.GameObjects.Text {
     return this.add.text(x, y, glyph, { fontSize: `${Math.round(size)}px`, fontFamily: 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif' }).setOrigin(0.5);
@@ -712,16 +733,68 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Places a tower exactly like a click would. Used by scripted playtests. */
   debugPlace(id: TowerId, col: number, row: number): boolean {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
     return !!tower;
   }
 
+  private howTo: Phaser.GameObjects.Container | null = null;
+
+  /**
+   * A card for viewers, explaining how chat plays. Shown at the start of the first build phase and
+   * toggled with H, so the streamer can bring it up whenever new viewers arrive.
+   */
+  private toggleHowTo(show = !this.howTo): void {
+    this.howTo?.destroy();
+    this.howTo = null;
+    if (!show) return;
+    const w = 560;
+    const h = 250;
+    const x = LAYOUT.panelX / 2 - w / 2;
+    const y = LAYOUT.topBar + 150;
+    const card = this.add.container(0, 0).setDepth(99);
+    const bg = this.add.graphics();
+    bg.fillStyle(COLORS.chat, 1).fillRoundedRect(x - 3, y - 3, w + 6, h + 6, 16);
+    bg.fillStyle(COLORS.panel, 0.97).fillRoundedRect(x, y, w, h, 14);
+    card.add(bg);
+    card.add(this.add.text(x + 20, y + 14, 'HOW CHAT PLAYS', text({ fontSize: '18px', fontStyle: 'bold', color: COLORS.chatText })));
+    const lines = [
+      'Type one word or emote to send a monster at the streamer.',
+      'Words mean things: snail is slow, rocket is fast fire, ghost hides.',
+      'Verbs do things (dig, heal, steal). Adjectives buff (angry, fast).',
+      'Spam the same word to merge it into a titan.',
+      'Counter words jam towers: water jams Flame, ground jams Tesla.',
+      'Every 5th wave: !vote 1, 2, or 3 for the boss.',
+    ];
+    lines.forEach((line, i) => card.add(this.add.text(x + 20, y + 48 + i * 27, `•  ${line}`, text({ fontSize: '14px', wordWrap: { width: w - 40 } }))));
+    card.add(this.add.text(x + w - 16, y + h - 12, 'H to hide', text({ fontSize: '12px', color: COLORS.muted })).setOrigin(1, 1));
+    this.howTo = card;
+  }
+
+  private upgradeSelected(): void {
+    const t = this.selectedTower;
+    if (!t) return;
+    if (!this.match.upgradeTower(t)) {
+      this.audio.play('deny');
+      return this.flash(t.level >= MAX_LEVEL ? 'Already max level' : 'Not enough gold');
+    }
+    this.audio.play('build');
+    const view = this.towerViews.get(t.id);
+    if (view) {
+      view.setScale(0.92 + 0.08 * (t.level - 1));
+      this.tweens.add({ targets: view, angle: 360, duration: 300, onComplete: () => view.setAngle(0) });
+    }
+    this.floatText(sx(t.x), sy(t.y) - 24, `LEVEL ${t.level}`, COLORS.strong, 13);
+    this.inspectKey = '';
+  }
+
   private sellSelected(): void {
     const t = this.selectedTower;
     if (!t) return;
     const refund = this.match.sellTower(t);
+    this.audio.play('sell');
     this.towerViews.get(t.id)?.destroy();
     this.towerViews.delete(t.id);
     this.floatText(sx(t.x), sy(t.y) - 20, `+◆${refund}`, COLORS.gold);
@@ -768,6 +841,7 @@ export class GameScene extends Phaser.Scene {
       case 'spawn':
         this.createMonsterView(e.monster);
         if (e.monster.order.boss) {
+          this.audio.play('boss');
           this.cameras.main.shake(300, 0.006);
           this.floatText(LAYOUT.panelX / 2, LAYOUT.topBar + 60, `👑 BOSS: ${e.monster.genome.token}`, '#ffd166', 26);
         }
@@ -775,16 +849,19 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'shot':
         this.shotFx(e.tower, e.target);
+        this.audio.play(e.tower.def.kind);
         break;
       case 'chain':
         this.boltFx(sx(e.from.x), sy(e.from.y), sx(e.to.x), sy(e.to.y));
         break;
       case 'pulse': {
+        this.audio.play('cold');
         const ring = this.add.circle(sx(e.tower.x), sy(e.tower.y), 10).setStrokeStyle(3, 0x90e0ef, 0.9).setDepth(40);
         this.tweens.add({ targets: ring, radius: e.tower.def.range, alpha: 0, duration: 380, onComplete: () => ring.destroy() });
         break;
       }
       case 'hit':
+        if (e.effect === 'strong') this.audio.play('strong');
         if (e.effect === 'strong') this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius, `${Math.round(e.amount)}!`, COLORS.strong);
         else if (e.effect === 'weak') this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius, `${Math.round(e.amount)}`, COLORS.weak, 11);
         break;
@@ -820,6 +897,7 @@ export class GameScene extends Phaser.Scene {
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
         break;
       case 'jam':
+        this.audio.play('jam');
         for (const t of e.towers) {
           this.boltFx(sx(e.monster.x), sy(e.monster.y), sx(t.x), sy(t.y));
           this.floatText(sx(t.x), sy(t.y) - 26, 'JAMMED', '#ff8fa3', 13);
@@ -841,11 +919,13 @@ export class GameScene extends Phaser.Scene {
         this.floatText(sx(e.tower.x), sy(e.tower.y) - 26, 'STUNNED', '#ffd166', 12);
         break;
       case 'death':
+        this.audio.play('death');
         this.deathFx(e.monster);
         this.removeMonsterView(e.monster.id);
         if (e.monster.bounty > 1) this.floatText(sx(e.monster.x), sy(e.monster.y) - 8, `+${e.monster.bounty}`, COLORS.gold, 12);
         break;
       case 'leak': {
+        this.audio.play('leak');
         this.removeMonsterView(e.monster.id);
         this.cameras.main.shake(140, 0.004);
         const base = this.match.world.map.base;
@@ -916,6 +996,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private shownPlan: WavePlan | null = null;
+  private audio!: AudioBus;
 
   /** Announces fusions and clashes at the top of the map as the wave starts. */
   private showCrowd(events: CrowdEvent[]): void {
@@ -1022,7 +1103,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const wild = g.source === 'wilds';
-    const base = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    // The element icon makes the counter readable without relying on color.
+    const icon = g.element ? `${ELEMENT_INFO[g.element].icon} ` : '';
+    const base = wild ? `⟡ ${g.token}` : `${icon}${g.token}${m.order.copies > 1 ? ` ×${m.order.copies}` : ''}`;
     const labelText = m.order.boss ? `👑 BOSS ${base}` : base;
     const label = this.add
       .text(0, -m.radius - 10, labelText, text({ fontSize: wild ? '11px' : '13px', fontStyle: 'bold', color: wild ? COLORS.wildsText : '#ffffff', stroke: '#000000', strokeThickness: 4 }))

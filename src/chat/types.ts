@@ -3,7 +3,7 @@
 export type Platform = 'twitch' | 'youtube' | 'kick' | 'local';
 
 export interface ChatEmote {
-  provider: 'twitch' | '7tv' | 'bttv' | 'ffz';
+  provider: 'twitch' | '7tv' | 'bttv' | 'ffz' | 'kick';
   id: string;
   name: string;
   url: string;

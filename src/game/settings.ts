@@ -8,6 +8,10 @@ export interface GameSettings {
   studio: StudioConfig;
   showNames: boolean;
   blocklist: string[];
+  /** Map id from MAPS. */
+  map: string;
+  /** Kick channel slug. Can be used together with a Twitch channel. */
+  kick: string;
 }
 
 export function settingsFromUrl(search: string): Partial<GameSettings> & { autostart: boolean } {
@@ -17,6 +21,8 @@ export function settingsFromUrl(search: string): Partial<GameSettings> & { autos
     channel: params.get('channel') ?? undefined,
     mode: mode === 'offline' || mode === 'blended' || mode === 'chat-only' ? mode : undefined,
     showNames: params.has('names') ? params.get('names') !== '0' : undefined,
+    map: params.get('map') ?? undefined,
+    kick: params.get('kick') ?? undefined,
     autostart: params.get('autostart') === '1',
   };
 }

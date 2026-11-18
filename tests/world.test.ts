@@ -233,3 +233,62 @@ describe('verbs and adjectives', () => {
     expect(hurt.hp).toBeGreaterThan(hurt.maxHp / 2);
   });
 });
+
+describe('tower upgrades', () => {
+  it('raises damage and range per level, with a perk at level 3', () => {
+    const world = new World(1000, 20);
+    const tesla = world.placeTower('tesla', 2, 3)!;
+    const base = { damage: tesla.def.damage, range: tesla.def.range, chains: tesla.def.chains! };
+    expect(world.upgradeTower(tesla)).toBe(true);
+    expect(tesla.level).toBe(2);
+    expect(tesla.def.damage).toBeGreaterThan(base.damage);
+    expect(tesla.def.range).toBeGreaterThan(base.range);
+    expect(world.upgradeTower(tesla)).toBe(true);
+    expect(tesla.def.chains).toBe(base.chains + 2);
+    expect(world.upgradeTower(tesla)).toBe(false);
+  });
+
+  it('charges gold and refunds part of everything spent', () => {
+    const world = new World(200, 20);
+    const needle = world.placeTower('needle', 2, 3)!;
+    const before = world.gold;
+    world.upgradeTower(needle);
+    expect(world.gold).toBeLessThan(before);
+    expect(needle.spent).toBeGreaterThan(50);
+    const broke = new World(50, 20);
+    expect(broke.upgradeTower(broke.placeTower('needle', 2, 3)!)).toBe(false);
+  });
+
+  it('never changes the shared tower definitions', () => {
+    const world = new World(1000, 20);
+    const needle = world.placeTower('needle', 2, 3)!;
+    world.upgradeTower(needle);
+    expect(world.placeTower('needle', 3, 3)!.def.damage).toBe(7);
+  });
+});
+
+describe('maps', () => {
+  it('builds every map with connected roads that end at the base', async () => {
+    const { MAPS, createMap } = await import('../src/sim/map');
+    for (const def of MAPS) {
+      const map = createMap(def);
+      for (const portal of ['chat', 'wilds'] as const) {
+        const end = map.paths[portal].pointAt(map.paths[portal].length);
+        expect(Math.hypot(end.x - map.base.x, end.y - map.base.y)).toBeLessThan(1);
+        expect(map.paths[portal].length).toBeGreaterThan(800);
+      }
+      expect(def.chat[def.chat.length - 1]).toEqual(def.shared[0]);
+      expect(def.wilds[def.wilds.length - 1]).toEqual(def.shared[0]);
+    }
+  });
+
+  it('lets an undefended monster reach the base on every map', async () => {
+    const { MAPS } = await import('../src/sim/map');
+    for (const def of MAPS) {
+      const world = new World(0, 20, def.id);
+      world.queueWave([order('snail')], 1);
+      run(world, 200);
+      expect(world.lives).toBe(19);
+    }
+  });
+});

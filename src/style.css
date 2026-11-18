@@ -142,3 +142,14 @@ code { color: var(--gold); }
 .studio-card label { display: flex; gap: 6px; align-items: center; }
 .studio-card label input:not([type]), .studio-card select { flex: 1; min-width: 0; }
 .studio-more { grid-column: 1 / -1; text-align: center; }
+
+.setup select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px;
+  font: inherit;
+  color: var(--text);
+  background: #100e20;
+  border: 2px solid var(--edge);
+  border-radius: 10px;
+}

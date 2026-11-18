@@ -120,3 +120,36 @@ export function formMultiplier(kind: DamageKind, form: FormClass): number {
 export function armorFactor(kind: DamageKind): number {
   return kind === 'pierce' ? 0.5 : kind === 'cold' ? 0 : 1;
 }
+
+export const MAX_LEVEL = 3;
+
+/** Gold to go from this level to the next, or null at max level. */
+export function upgradeCost(base: TowerDef, level: number): number | null {
+  if (level >= MAX_LEVEL) return null;
+  return Math.round(base.cost * (level === 1 ? 0.6 : 1.0));
+}
+
+/** What the level 3 perk does, for the inspect panel. */
+export const LEVEL3_PERK: Record<TowerId, string> = {
+  needle: 'fires 30% faster',
+  hammer: 'splash 40% wider',
+  frost: 'slows harder',
+  flame: 'burns 50% hotter',
+  tesla: 'chains to two more',
+};
+
+/** A tower's stats at a level. Each level adds damage and range; level 3 adds a perk. */
+export function towerAtLevel(base: TowerDef, level: number): TowerDef {
+  if (level <= 1) return base;
+  const up = level - 1;
+  const def: TowerDef = { ...base, damage: base.damage * (1 + 0.6 * up), range: base.range * (1 + 0.1 * up) };
+  if (base.burnDps) def.burnDps = base.burnDps * (1 + 0.6 * up);
+  if (level >= 3) {
+    if (base.id === 'needle') def.cooldown = base.cooldown * 0.7;
+    if (base.id === 'hammer') def.splash = (base.splash ?? 0) * 1.4;
+    if (base.id === 'frost') def.slow = Math.min(0.7, (base.slow ?? 0) + 0.15);
+    if (base.id === 'flame') def.burnDps = (def.burnDps ?? 0) * 1.5;
+    if (base.id === 'tesla') def.chains = (base.chains ?? 0) + 2;
+  }
+  return def;
+}

@@ -6,6 +6,8 @@ The work is split into **packages**. Each package is sized to fit in one chat se
 
 Or just "do the next package", which means the first package below whose status is `todo` and whose dependencies are `done`.
 
+**State on 2026-11-18:** milestones 1 to 4 and most of 5 are built, each in its own stacked PR (#1 to #5). Every remaining package needs the user first: U1 to U6 below. Until then, the best use of a new chat is bug fixes and tuning from U4 playtest notes. The milestone branches stack, so work on the newest branch (`milestone-5-polish`) and merge order is #1, #2, #3, #4, #5.
+
 ## How a package is worked
 
 1. Read `CLAUDE.md`, this file, and the docs the package lists.
@@ -37,6 +39,7 @@ Or just "do the next package", which means the first package below whose status 
 | U3 | Review and merge PR #1 (milestone 1). Later milestone PRs stack on it. | user |
 | U4 | Play a session with a real chat and report what felt good or bad. Milestone 2 is ready for this. Especially: is offline too easy, is busy chat too hard, and do the monsters read at a glance? | user |
 | U5 | Register a Twitch developer app and share its Client ID (not the secret). Needed by M3.6 and M4.6. | user |
+| U6 | Decide on YouTube: is it worth creating a Google Cloud project with the YouTube Data API and an OAuth client? Without one, YouTube chat cannot be read from a browser. | user |
 
 ---
 
@@ -140,15 +143,17 @@ Branch: `milestone-4-crowd`.
 | M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | done: `src/sim/bestiary.ts` and `src/studio/bestiaryView.ts` (B key in game, or the setup screen). New species and evolutions are announced at wave start. A species that leaks 3 times in a run comes back as its Prime form: elite, 25% more power, a bit bigger. The Abstract family now shows as Idea, so it never reads like the Spirit element. |
 | M4.6 | Channel point redemptions through EventSub WebSocket: rewards that help or hurt the streamer. | M3.6 | blocked: needs U5 |
 
-## Milestone 5: Polish and reach
+## Milestone 5: Polish and reach (M5.1 to M5.5 done, in PR #5)
+
+Branch: `milestone-5-polish`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M5.1 | Sound: procedural Web Audio effects for shots, hits, deaths, leaks, and wave start. A simple music loop. A mute toggle. | none | todo |
-| M5.2 | Tower upgrades: two levels per tower. | M2.4 | todo |
-| M5.3 | More maps and a map picker. | none | todo |
-| M5.4 | YouTube and Kick chat adapters. Research first: both need API keys or unofficial endpoints. | none | todo |
-| M5.5 | Streamer quality of life: remembered settings, an on-screen "how chat plays" card, a colorblind-safe palette, and an OBS-friendly layout. | none | todo |
+| M5.1 | Sound: procedural Web Audio effects for shots, hits, deaths, leaks, and wave start. A simple music loop. A mute toggle. | none | done: `src/game/audio.ts`. Every sound is synthesized, so no audio files or licenses. Rapid sounds are throttled. The music loop gets busier during waves. M mutes and is remembered. Needs a human ear: U4 should include whether the sound is pleasant. |
+| M5.2 | Tower upgrades: two levels per tower. | M2.4 | done: U upgrades the selected tower. Level 2 costs 60% of the tower and level 3 costs 100%; each level adds 60% damage and 10% range, and level 3 adds a perk (Needle fires faster, Hammer splashes wider, Frost slows harder, Flame burns hotter, Tesla chains further). The first numbers (+40% for 80%) made upgrades a trap. Bot with `TOWER_CAP=14`: offline 20/20 with 18.2 lives (vs 15.0 without upgrades); busy chat smart 13/20 (vs 15/20), so upgrades are a fair alternative, not a must. |
+| M5.3 | More maps and a map picker. | none | done: maps are data in `src/sim/map.ts` (`MAPS`). Switchback (the original), Twin Lanes (separate zigzag lanes that meet at the gate), and Spiral (coils inward to a central base). Picker on the setup screen, or `?map=twin`. Each map has a toughness multiplier on monster health, tuned with the bot: Twin 0.75, Spiral 1.3. Busy chat, smart bot: Switchback 15/20, Twin 15/20, Spiral 17/20. The bot now covers only the lanes that carry monsters (offline means Wilds only). A threat multiplier did not work, because gold scales with threat. |
+| M5.4 | YouTube and Kick chat adapters. Research first: both need API keys or unofficial endpoints. | none | Kick done: `src/chat/kick.ts`, verified live on 2026-11-18. Kick has no official read-only chat API, so this uses the public Pusher socket Kick's site uses (key `34bf7a0ff419a2a775b9`, cluster us2, rotated by Kick in October 2026). If Kick rotates again, the HUD says so and `KICK_PUSHER_KEY` needs updating. Inline `[emote:id:name]` emotes become monster faces. Setup field or `?kick=`, alone or alongside Twitch. YouTube: blocked on U6. Reading live chat needs a Google Cloud project, an API key, and OAuth, and the 10,000 daily quota units at 5 per read allow only light polling. |
+| M5.5 | Streamer quality of life: remembered settings, an on-screen "how chat plays" card, a colorblind-safe palette, and an OBS-friendly layout. | none | done, mostly: the setup form remembers its last values (URL options still win); a "how chat plays" card shows for the first build phase and toggles with H; nameplates show an element icon so elements never depend on color alone. Not done: a separate OBS layout. The game already fits any browser source at 16:9, so wait for U4 feedback before building one. |
 | M5.6 | Art pass on the sticker style. Needs the user's sign-off on direction. | M2.5 | todo |
 | M5.7 | Desktop build for Steam (Tauri). Needs the user's Steam account. | M5.6 | todo |
 
