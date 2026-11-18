@@ -50,7 +50,7 @@ Shipped in PR #1: the TypeScript, Vite, Phaser 4, and Vitest project; generator 
 
 Goal: a monster behaves like what its word means. Today `snail` and `rocket` differ only by how they sound. Branch: `milestone-2-meaning`.
 
-### M2.1 Lexicon build pipeline: done
+### M2.1 Lexicon build pipeline: todo
 
 - **Goal.** An offline tool turns WordNet plus a hand-curated seed file into a small lexicon the game ships. The game never needs a model at runtime.
 - **Build.** `tools/lexicon/build.ts` (run with `npm run lexicon`). Reads `wordnet-db` (dev dependency) and `data/lexicon/seeds.tsv`. Writes `src/genome/data/lexicon.json`.
