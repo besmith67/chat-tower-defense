@@ -7,7 +7,7 @@ import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
 import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
 import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emoteGenes';
-import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
+import { ELEMENT_INFO, FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { COLS, ROWS, TILE, tileKey } from '../sim/map';
 import type { WavePlan } from '../sim/collector';
@@ -139,6 +139,7 @@ export class GameScene extends Phaser.Scene {
     window.addEventListener('keydown', this.keyHandler);
     this.unsubscribe = this.hub.on((e) => this.onChat(e));
     this.registry.set('match', this.match);
+    if (this.settings.mode !== 'offline') this.toggleHowTo(true);
 
     this.audio = new AudioBus();
     this.events.once('shutdown', () => {
@@ -158,6 +159,7 @@ export class GameScene extends Phaser.Scene {
       this.showCrowd(this.match.lastPlan.crowd);
       this.match.bestiary.save(this.settings.channel);
       this.audio.play('wave');
+      if (this.match.wave === 1) this.toggleHowTo(false);
       if (this.match.lastPlan.crowd.length) this.time.delayedCall(300, () => this.audio.play('crowd'));
     }
     this.audio.setIntensity(this.match.phase === 'wave');
@@ -415,7 +417,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, 'U upgrade · S sell · F speed · B bestiary · M mute', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 12, LAYOUT.height - 12, 'U upgrade · S sell · F speed · B bestiary · H help · M mute', text({ fontSize: '10px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -634,6 +636,7 @@ export class GameScene extends Phaser.Scene {
     else if (key === 'u' && this.selectedTower) this.upgradeSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
     else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
+    else if (key === 'h') this.toggleHowTo();
     else if (key === 'm') this.flash(this.audio.toggleMute() ? 'Sound off (M)' : 'Sound on (M)');
     else if (key === '`') {
       e.preventDefault();
@@ -735,6 +738,39 @@ export class GameScene extends Phaser.Scene {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
     return !!tower;
+  }
+
+  private howTo: Phaser.GameObjects.Container | null = null;
+
+  /**
+   * A card for viewers, explaining how chat plays. Shown at the start of the first build phase and
+   * toggled with H, so the streamer can bring it up whenever new viewers arrive.
+   */
+  private toggleHowTo(show = !this.howTo): void {
+    this.howTo?.destroy();
+    this.howTo = null;
+    if (!show) return;
+    const w = 560;
+    const h = 250;
+    const x = LAYOUT.panelX / 2 - w / 2;
+    const y = LAYOUT.topBar + 150;
+    const card = this.add.container(0, 0).setDepth(99);
+    const bg = this.add.graphics();
+    bg.fillStyle(COLORS.chat, 1).fillRoundedRect(x - 3, y - 3, w + 6, h + 6, 16);
+    bg.fillStyle(COLORS.panel, 0.97).fillRoundedRect(x, y, w, h, 14);
+    card.add(bg);
+    card.add(this.add.text(x + 20, y + 14, 'HOW CHAT PLAYS', text({ fontSize: '18px', fontStyle: 'bold', color: COLORS.chatText })));
+    const lines = [
+      'Type one word or emote to send a monster at the streamer.',
+      'Words mean things: snail is slow, rocket is fast fire, ghost hides.',
+      'Verbs do things (dig, heal, steal). Adjectives buff (angry, fast).',
+      'Spam the same word to merge it into a titan.',
+      'Counter words jam towers: water jams Flame, ground jams Tesla.',
+      'Every 5th wave: !vote 1, 2, or 3 for the boss.',
+    ];
+    lines.forEach((line, i) => card.add(this.add.text(x + 20, y + 48 + i * 27, `•  ${line}`, text({ fontSize: '14px', wordWrap: { width: w - 40 } }))));
+    card.add(this.add.text(x + w - 16, y + h - 12, 'H to hide', text({ fontSize: '12px', color: COLORS.muted })).setOrigin(1, 1));
+    this.howTo = card;
   }
 
   private upgradeSelected(): void {
@@ -1067,7 +1103,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const wild = g.source === 'wilds';
-    const base = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    // The element icon makes the counter readable without relying on color.
+    const icon = g.element ? `${ELEMENT_INFO[g.element].icon} ` : '';
+    const base = wild ? `⟡ ${g.token}` : `${icon}${g.token}${m.order.copies > 1 ? ` ×${m.order.copies}` : ''}`;
     const labelText = m.order.boss ? `👑 BOSS ${base}` : base;
     const label = this.add
       .text(0, -m.radius - 10, labelText, text({ fontSize: wild ? '11px' : '13px', fontStyle: 'bold', color: wild ? COLORS.wildsText : '#ffffff', stroke: '#000000', strokeThickness: 4 }))

@@ -17,10 +17,11 @@ const testChat = document.getElementById('test-chat') as HTMLFormElement;
 const fromUrl = settingsFromUrl(location.search);
 
 const field = <T extends HTMLElement>(name: string) => setup.elements.namedItem(name) as T;
-if (fromUrl.channel) field<HTMLInputElement>('channel').value = fromUrl.channel;
-if (fromUrl.showNames !== undefined) field<HTMLInputElement>('showNames').checked = fromUrl.showNames;
 const mapSelect = field<HTMLSelectElement>('map');
 mapSelect.replaceChildren(...MAPS.map((m) => new Option(`${m.name}: ${m.blurb}`, m.id)));
+restoreSetup();
+if (fromUrl.channel) field<HTMLInputElement>('channel').value = fromUrl.channel;
+if (fromUrl.showNames !== undefined) field<HTMLInputElement>('showNames').checked = fromUrl.showNames;
 if (fromUrl.map) mapSelect.value = fromUrl.map;
 if (fromUrl.mode) {
   const radio = setup.querySelector<HTMLInputElement>(`input[name="mode"][value="${fromUrl.mode}"]`);
@@ -30,6 +31,7 @@ if (fromUrl.mode) {
 setup.addEventListener('submit', (e) => {
   e.preventDefault();
   const data = new FormData(setup);
+  saveSetup(data);
   start({
     mode: (data.get('mode') as ChatMode) ?? 'blended',
     channel: String(data.get('channel') ?? '').trim(),
@@ -123,4 +125,34 @@ function wireTestChat(local: LocalChatSource, showByDefault: boolean): void {
     testChat.classList.toggle('hidden');
     if (!testChat.classList.contains('hidden')) input.focus();
   });
+}
+
+/** The setup form remembers the streamer's last choices. URL options still win. */
+const SETUP_KEY = 'ctd.setup';
+
+function saveSetup(data: FormData): void {
+  try {
+    localStorage.setItem(SETUP_KEY, JSON.stringify(Object.fromEntries([...data.entries()].map(([k, v]) => [k, String(v)]))));
+  } catch {
+    // Storage blocked: nothing to remember.
+  }
+}
+
+function restoreSetup(): void {
+  let saved: Record<string, string> = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}');
+  } catch {
+    return;
+  }
+  for (const [name, value] of Object.entries(saved)) {
+    if (name === 'mode') {
+      const radio = setup.querySelector<HTMLInputElement>(`input[name="mode"][value="${CSS.escape(value)}"]`);
+      if (radio) radio.checked = true;
+    } else if (name !== 'showNames') {
+      const el = setup.elements.namedItem(name);
+      if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) el.value = value;
+    }
+  }
+  if (Object.keys(saved).length) field<HTMLInputElement>('showNames').checked = saved.showNames === 'on';
 }
