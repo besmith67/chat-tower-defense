@@ -50,13 +50,14 @@ Shipped in PR #1: the TypeScript, Vite, Phaser 4, and Vitest project; generator 
 
 Goal: a monster behaves like what its word means. Today `snail` and `rocket` differ only by how they sound. Branch: `milestone-2-meaning`.
 
-### M2.1 Lexicon build pipeline: todo
+### M2.1 Lexicon build pipeline: done
 
 - **Goal.** An offline tool turns WordNet plus a hand-curated seed file into a small lexicon the game ships. The game never needs a model at runtime.
 - **Build.** `tools/lexicon/build.ts` (run with `npm run lexicon`). Reads `wordnet-db` (dev dependency) and `data/lexicon/seeds.tsv`. Writes `src/genome/data/lexicon.json`.
 - **Each entry.** Part of speech, family (from WordNet hypernyms), element, eight axis scores, and a rarity score (from WordNet sense tag counts).
 - **Runtime.** `src/genome/lexicon.ts` with `lookupWord(root)`.
 - **Done when.** Common words resolve with sensible family and part of speech, the JSON stays under about 400 KB, and tests cover the lookup.
+- **Result.** 34,445 words, 328 KB (142 KB gzipped). Families come from WordNet lexicographer files. Lookup handles plurals, -ing, -ed, and stretched letters. Irregular forms (wolves, ran) are not handled. Only 18 anchor seeds so far, so most words have neutral axes until M2.2.
 
 ### M2.2 Curated meaning seeds: todo
 
@@ -152,6 +153,7 @@ Settled choices, so later chats do not reopen them.
 
 - **Stack.** TypeScript, Vite, Phaser 4, Vitest. GitHub Pages hosting. No server.
 - **Meaning data.** Built offline from WordNet plus hand-curated seeds, not from embeddings. WordNet gives part of speech, families from hypernyms, synonym sets, and frequency. Seeds give axis scores, and synonyms inherit them. Embeddings can be added later if coverage is thin.
+- **Families.** The ten from MONSTER_GENERATION.md, except Weather is renamed Elemental and also covers substances (lava, water, mud). Plants count as Beasts.
 - **Elements.** Six plus neutral: fire, frost, storm, venom, stone, spirit. Ten was too many to read at a glance on stream.
 - **Damage kinds.** pierce (Needle), blunt (Hammer), cold (Frost), fire (Flame), shock (Tesla).
 - **Form still sets the shape counter.** Meaning changes stats and element, never the spiky or round class. That keeps the counter readable from shape alone.

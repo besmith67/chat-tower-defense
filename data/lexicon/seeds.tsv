@@ -1,0 +1,30 @@
+# Hand-scored meanings. Rebuild with `npm run lexicon`.
+#
+# Columns: word  pos  family  element  axes...
+#   pos      n, v, a, r, or - to keep WordNet's dominant part of speech
+#   family   beast construct food person body place elemental abstract sound meme, or -
+#   element  fire frost storm venom stone spirit, or -
+#   axes     sp speed, ma mass, ha hardness, he heat, li life, mo mood (+ hostile), or order (+ chaotic), pr presence (+ loud)
+#            written like sp-2 or he+3, range -3 to +3, omitted means 0
+#
+# Seed the clearest word of a meaning cluster. Synonyms and close WordNet neighbors inherit it.
+
+# --- axis anchors ---
+fast      a  -  -       sp+3
+quick     a  -  -       sp+2
+slow      a  -  -       sp-3
+huge      a  -  -       ma+3
+giant     n  person -   ma+3 ha+1
+tiny      a  -  -       ma-3
+hard      a  -  -       ha+2
+soft      a  -  -       ha-2
+hot       a  -  fire    he+3
+cold      a  -  frost   he-3
+alive     a  -  -       li+2
+dead      a  -  spirit  li-3
+angry     a  -  -       mo+3 pr+1
+kind      a  -  -       mo-2
+chaotic   a  -  -       or+3
+calm      a  -  -       or-2 sp-1 pr-1
+loud      a  -  -       pr+3
+quiet     a  -  -       pr-2
