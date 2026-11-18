@@ -36,6 +36,8 @@ export interface SpawnOrder {
   cost: number;
   /** How many copies of the token chat sent for this monster. */
   copies: number;
+  /** The boss of a boss wave. */
+  boss?: boolean;
   /** Who sent it. Null for the Wilds. */
   sender: string | null;
 }
@@ -63,6 +65,11 @@ export class SpawnCollector {
   /** The streamer's Emote Studio choices: renames, disabled emotes, signature abilities. */
   setStudio(config: StudioConfig): void {
     this.studio = config;
+  }
+
+  /** Marked as a boss candidate in the Emote Studio. */
+  isBossPick(genome: Genome): boolean {
+    return !!(genome.emote && this.studio[genome.emote.id]?.boss);
   }
 
   /** Pending species in the order they will be spent: most copies first, then earliest. */

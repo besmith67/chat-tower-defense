@@ -127,13 +127,13 @@ Branch: `milestone-3-emotes`.
 | M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | done: `src/studio/studioView.ts` (dialog from the setup screen) and `src/sim/studio.ts` (pure, tested). Finds the channel id by joining chat anonymously, lists 7TV, BTTV, and FFZ channel emotes with search. Twitch sub emotes are not listed until M3.6 adds a login. Boss flags are saved for M4.1 to use. |
 | M3.6 | Twitch OAuth (implicit flow, Client ID from U5) and sub-tier rarity for emotes. | U5 | blocked: needs U5 |
 
-## Milestone 4: Chat as a force
+## Milestone 4: Chat as a force (in progress)
 
 Branch: `milestone-4-crowd`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M4.1 | Boss waves every fifth wave. Chat votes with `!vote 1/2/3` among three candidates built from the run's most popular species. | M2.3 | todo |
+| M4.1 | Boss waves every fifth wave. Chat votes with `!vote 1/2/3` among three candidates built from the run's most popular species. | M2.3 | done: `src/sim/boss.ts`. Candidates are Emote Studio boss picks, then the most-sent species, then Wilds. Bare `1`, `2`, `3` also vote and never spawn. The boss takes 30% of the wave budget as one slow giant (titan discount applies) and walks in last. Healing now divides by size squared, because percent regen made a love-boss unkillable. Busy chat: smart 18/20, blind 12/20, worst 4/20. |
 | M4.2 | Synonym fusion and antonym clash in the spawn window, using lexicon axes. | M2.3 | todo |
 | M4.3 | Rhyme chains and alliteration packs. | M2.3 | todo |
 | M4.4 | Tower sabotage: words near a tower's weakness (`rust`, `ground`, `water`) spawn saboteurs that go after that tower type. | M2.4 | todo |

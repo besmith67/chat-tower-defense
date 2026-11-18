@@ -404,7 +404,49 @@ export class GameScene extends Phaser.Scene {
       .setDepth(91);
   }
 
+  private voteRows: Obj[] = [];
+
+  /** The boss vote box at the top of the map, shown during the build phase before a boss wave. */
+  private refreshBossVote(): void {
+    for (const o of this.voteRows) o.destroy();
+    this.voteRows = [];
+    const vote = this.match.bossVote;
+    if (!vote || this.match.phase !== 'build') return;
+    const add = <T extends Obj>(o: T): T => {
+      this.voteRows.push(o);
+      return o;
+    };
+    const w = 480;
+    const x0 = LAYOUT.panelX / 2 - w / 2;
+    const y0 = LAYOUT.topBar + 10;
+    const box = add(this.add.graphics().setDepth(95));
+    box.fillStyle(COLORS.elite, 1).fillRoundedRect(x0 - 2, y0 - 2, w + 4, 128, 14);
+    box.fillStyle(COLORS.panel, 0.97).fillRoundedRect(x0, y0, w, 124, 12);
+    const offline = this.match.mode === 'offline';
+    const title = offline ? `BOSS WAVE ${this.match.wave} · the Wilds choose` : `BOSS VOTE · wave ${this.match.wave} · type !vote 1, 2, or 3`;
+    add(this.add.text(x0 + w / 2, y0 + 8, title, text({ fontSize: '14px', fontStyle: 'bold', color: '#ffd166' })).setOrigin(0.5, 0).setDepth(96));
+    const counts = vote.tally();
+    const total = Math.max(1, vote.total);
+    vote.candidates.forEach((c, i) => {
+      const cx = x0 + (i + 0.5) * (w / 3);
+      const tex = monsterTexture(this, c.genome);
+      const icon = add(this.add.image(cx - 50, y0 + 62, tex.key).setOrigin(tex.originX, tex.originY).setDepth(96));
+      icon.setScale(Math.min(1, 36 / (c.genome.look.radius * 2)));
+      if (c.genome.emote && this.textures.exists(this.emoteKey(c.genome.emote))) {
+        add(this.add.image(cx - 50, y0 + 62, this.emoteKey(c.genome.emote)).setDisplaySize(26, 26).setDepth(97));
+      }
+      if (c.genome.emoji) add(this.emojiFace(cx - 50, y0 + 62, c.genome.emoji, 22).setDepth(97));
+      add(this.add.text(cx - 26, y0 + 40, `${i + 1}`, text({ fontSize: '13px', fontStyle: 'bold', color: '#ffd166' })).setDepth(96));
+      const name = c.genome.source === 'wilds' ? `⟡ ${c.genome.token}` : c.genome.token;
+      add(this.add.text(cx - 12, y0 + 40, name.length > 11 ? name.slice(0, 10) + '…' : name, text({ fontSize: '14px', fontStyle: 'bold' })).setDepth(96));
+      add(this.add.text(cx - 26, y0 + 62, offline ? '' : `${counts[i]} vote${counts[i] === 1 ? '' : 's'}`, text({ fontSize: '12px', color: COLORS.muted })).setDepth(96));
+      add(this.add.rectangle(cx - 26, y0 + 86, 96, 8, 0x2b2550).setOrigin(0).setDepth(96));
+      if (!offline) add(this.add.rectangle(cx - 26, y0 + 86, Math.max(2, (96 * counts[i]) / total), 8, COLORS.elite).setOrigin(0).setDepth(97));
+    });
+  }
+
   private refreshPanel(): void {
+    this.refreshBossVote();
     for (const o of this.panelRows) o.destroy();
     this.panelRows = [];
     const x = LAYOUT.panelX + 16;
@@ -711,6 +753,10 @@ export class GameScene extends Phaser.Scene {
     switch (e.type) {
       case 'spawn':
         this.createMonsterView(e.monster);
+        if (e.monster.order.boss) {
+          this.cameras.main.shake(300, 0.006);
+          this.floatText(LAYOUT.panelX / 2, LAYOUT.topBar + 60, `👑 BOSS: ${e.monster.genome.token}`, '#ffd166', 26);
+        }
         if (e.monster.genome.source === 'chat' && e.monster.order.cost > 0) this.spotlight = e.monster;
         break;
       case 'shot':
@@ -928,12 +974,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     const wild = g.source === 'wilds';
-    const labelText = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    const base = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    const labelText = m.order.boss ? `👑 BOSS ${base}` : base;
     const label = this.add
       .text(0, -m.radius - 10, labelText, text({ fontSize: wild ? '11px' : '13px', fontStyle: 'bold', color: wild ? COLORS.wildsText : '#ffffff', stroke: '#000000', strokeThickness: 4 }))
       .setOrigin(0.5, 1)
       // Wilds are marked by their glitchy look. Hiding their names keeps chat's words readable.
-      .setVisible(!wild);
+      .setVisible(!wild || !!m.order.boss);
     const hpBg = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x000000, 0.7).setOrigin(0, 0.5).setVisible(false);
     const hpFill = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x7cff9b).setOrigin(0, 0.5).setVisible(false);
     // Heralds and healers show their aura so the streamer can see why neighbors got tougher.

@@ -31,6 +31,8 @@ export const BALANCE = {
   titanSlowExponent: 1,
   /** Towers see stealthy monsters at this fraction of their range. */
   stealthRange: 0.8,
+  /** Regen heals this share of max health per second, divided by size squared for titans and bosses. */
+  regenPerSecond: 0.02,
 
   /** Each viewer can add this many monsters per spawn window. */
   perViewerCap: 2,

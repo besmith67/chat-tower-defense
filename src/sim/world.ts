@@ -241,7 +241,9 @@ export class World {
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.age += dt;
-      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      // Percentage healing would make huge bodies unkillable, so titans and bosses heal slower.
+      const healScale = 1 / (m.order.scale * m.order.scale);
+      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * BALANCE.regenPerSecond * healScale * dt);
       if (this.time < m.burnUntil && m.burnBy) {
         m.hp -= m.burnDps * elementMultiplier('fire', m.genome.element) * dt;
         if (m.hp <= 0) {
@@ -254,10 +256,10 @@ export class World {
       for (const h of this.heraldsNear(m)) {
         const a = h.genome.meaning!.axes;
         speed *= 1 + 0.06 * a.speed;
-        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * dt);
+        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * healScale * dt);
       }
       if (healers.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) {
-        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * healScale * dt);
       }
       m.dist += speed * dt;
 

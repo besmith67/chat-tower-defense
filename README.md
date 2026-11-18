@@ -26,6 +26,8 @@ A monster's color shows its element: red fire, cyan frost, yellow storm, green v
 
 Towers also get stronger against species they have killed many times, so chat has to keep changing what it sends.
 
+Every fifth wave is a boss wave. Chat votes with `!vote 1`, `!vote 2`, or `!vote 3` on which of its favorite monsters becomes the boss.
+
 ### Controls
 
 | Key | Action |
