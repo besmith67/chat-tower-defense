@@ -99,6 +99,8 @@ export class World {
   wave = 1;
   private queue: QueuedSpawn[] = [];
   private events: SimEvent[] = [];
+  /** Leaks per species this run, for evolution. */
+  readonly leaksBySpecies = new Map<string, number>();
   private nextId = 1;
 
   constructor(gold: number = BALANCE.startingGold, lives: number = BALANCE.startingLives) {
@@ -302,6 +304,7 @@ export class World {
       if (m.dist >= path.length) {
         m.alive = false;
         this.lives = Math.max(0, this.lives - m.livesCost);
+        this.leaksBySpecies.set(m.genome.key, (this.leaksBySpecies.get(m.genome.key) ?? 0) + 1);
         this.events.push({ type: 'leak', monster: m });
         if (m.genome.quirks.includes('thief')) {
           const amount = Math.min(this.gold, 4 + 6 * m.livesCost);

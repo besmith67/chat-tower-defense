@@ -12,6 +12,8 @@ import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import type { WavePlan } from '../sim/collector';
 import type { CrowdEvent } from '../sim/crowd';
+import { Bestiary } from '../sim/bestiary';
+import { openBestiary } from '../studio/bestiaryView';
 import { Match } from '../sim/match';
 import { sabotageTarget } from '../sim/sabotage';
 import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
@@ -94,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = this.registry.get('settings');
     this.hub = this.registry.get('hub');
     setStreamerBlocklist(this.settings.blocklist);
-    this.match = new Match({ mode: this.settings.mode });
+    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel) });
     this.match.collector.setShowNames(this.settings.showNames);
     this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
@@ -151,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     if (this.match.lastPlan && this.match.lastPlan !== this.shownPlan) {
       this.shownPlan = this.match.lastPlan;
       this.showCrowd(this.match.lastPlan.crowd);
+      this.match.bestiary.save(this.settings.channel);
     }
     this.syncMonsters();
     this.syncStuns();
@@ -406,7 +409,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -604,6 +607,7 @@ export class GameScene extends Phaser.Scene {
   private onKey(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+    if (document.querySelector('dialog[open]')) return;
     const key = e.key.toLowerCase();
     const tower = TOWER_ORDER.find((id) => TOWERS[id].hotkey === key);
     if (tower) this.selectBuild(tower);
@@ -614,6 +618,7 @@ export class GameScene extends Phaser.Scene {
     } else if (key === 'f') this.cycleSpeed();
     else if (key === 's' && this.selectedTower) this.sellSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
+    else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
     else if (key === '`') {
       e.preventDefault();
       window.dispatchEvent(new Event('toggle-test-chat'));
@@ -914,13 +919,18 @@ export class GameScene extends Phaser.Scene {
 
   /** Announces fusions and clashes at the top of the map as the wave starts. */
   private showCrowd(events: CrowdEvent[]): void {
-    events.slice(0, 4).forEach((e, i) => {
-      const message =
-        e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}`
-        : e.type === 'clash' ? `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`
-        : e.type === 'rhyme' ? `RHYME CHAIN  ${e.tokens.join(' · ')}  (shielded)`
-        : `PACK  ${e.tokens.join(' · ')}  (speed aura)`;
-      const color = e.type === 'fusion' ? '#ffd166' : e.type === 'clash' ? '#ff8fa3' : e.type === 'rhyme' ? '#7df9ff' : '#7cff9b';
+    const lines: [string, string][] = events.map((e) => [
+      e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}`
+      : e.type === 'clash' ? `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`
+      : e.type === 'rhyme' ? `RHYME CHAIN  ${e.tokens.join(' · ')}  (shielded)`
+      : `PACK  ${e.tokens.join(' · ')}  (speed aura)`,
+      e.type === 'fusion' ? '#ffd166' : e.type === 'clash' ? '#ff8fa3' : e.type === 'rhyme' ? '#7df9ff' : '#7cff9b',
+    ]);
+    for (const token of this.match.evolutions) lines.unshift([`EVOLVED  ${token} Prime`, '#ff8fd1']);
+    const found = this.match.discoveries;
+    if (found.length === 1) lines.push([`NEW SPECIES  ${found[0].token}  found by ${found[0].by}`, '#c9b6ff']);
+    else if (found.length > 1) lines.push([`${found.length} NEW SPECIES  ${found.slice(0, 3).map((d) => d.token).join(', ')}${found.length > 3 ? '…' : ''}`, '#c9b6ff']);
+    lines.slice(0, 4).forEach(([message, color], i) => {
       this.time.delayedCall(i * 600, () => {
         const t = this.add
           .text(LAYOUT.panelX / 2, LAYOUT.topBar + 40 + i * 30, message, text({ fontSize: '20px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 5 }))

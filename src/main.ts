@@ -7,6 +7,7 @@ import { GameScene } from './game/GameScene';
 import { settingsFromUrl, type GameSettings } from './game/settings';
 import { LAYOUT } from './game/theme';
 import { loadStudio } from './sim/studio';
+import { openBestiary } from './studio/bestiaryView';
 import { openStudio } from './studio/studioView';
 import type { ChatMode } from './sim/collector';
 
@@ -45,6 +46,10 @@ document.getElementById('open-studio')!.addEventListener('click', () => {
     return;
   }
   void openStudio(channel);
+});
+
+document.getElementById('open-bestiary')!.addEventListener('click', () => {
+  openBestiary(field<HTMLInputElement>('channel').value.trim());
 });
 
 if (fromUrl.autostart) setup.requestSubmit();

@@ -2,6 +2,7 @@
 import type { ChatEvent } from '../chat/types';
 import { mulberry32, type Rng } from '../genome';
 import { BALANCE } from './balance';
+import { Bestiary, type Discovery } from './bestiary';
 import { BOSS_SHARE, BossVote, isBossWave, pickCandidates, type BossCandidate } from './boss';
 import { SpawnCollector, type ChatMode, type SpawnOrder, type WavePlan } from './collector';
 import type { TowerId } from './towers';
@@ -12,7 +13,11 @@ export type Phase = 'build' | 'wave' | 'won' | 'lost';
 export interface MatchOptions {
   mode: ChatMode;
   seed?: number;
+  bestiary?: Bestiary;
 }
+
+/** Leaks it takes for a species to evolve into its Prime form for the rest of the run. */
+export const EVOLVE_AT = 3;
 
 export class Match {
   readonly world = new World();
@@ -31,11 +36,20 @@ export class Match {
   boss: BossCandidate | null = null;
   /** Every chat species spawned this run, with how many copies chat sent. Boss candidates come from here. */
   private history = new Map<string, BossCandidate>();
+  readonly bestiary: Bestiary;
+  /** New species discovered in the last wave, for the HUD to announce. */
+  discoveries: Discovery[] = [];
+  /** Species that evolved this run, by key. */
+  readonly evolved = new Set<string>();
+  /** Species that evolved when the last wave started, for the HUD to announce. */
+  evolutions: string[] = [];
+  private leaksRecorded = new Map<string, number>();
   private rng: Rng;
 
   constructor(options: MatchOptions) {
     this.mode = options.mode;
     this.rng = mulberry32(options.seed ?? Date.now());
+    this.bestiary = options.bestiary ?? new Bestiary();
   }
 
   handleChat(event: ChatEvent): void {
@@ -67,7 +81,9 @@ export class Match {
     this.bossVote = null;
     const bossBudget = boss ? budget * BOSS_SHARE : 0;
     this.lastPlan = this.collector.takeWave(budget - bossBudget, this.mode, this.rng);
+    this.evolve(this.lastPlan.orders);
     this.recordHistory(this.lastPlan.orders);
+    this.discoveries = this.bestiary.record(this.lastPlan.orders, new Date().toISOString().slice(0, 10));
     if (boss) {
       this.boss = boss;
       // The boss walks in last, behind its wave.
@@ -93,7 +109,30 @@ export class Match {
     if (this.world.waveDone) this.endWave();
   }
 
+  /** Species that leaked often this run come back as their Prime form: tougher, and an elite. */
+  private evolve(orders: SpawnOrder[]): void {
+    this.evolutions = [];
+    for (const [key, leaks] of this.world.leaksBySpecies) {
+      if (leaks >= EVOLVE_AT && !this.evolved.has(key)) {
+        this.evolved.add(key);
+        const sample = orders.find((o) => o.genome.key === key);
+        if (sample) this.evolutions.push(sample.genome.token);
+      }
+    }
+    for (const o of orders) {
+      if (!this.evolved.has(o.genome.key) || o.genome.source !== 'chat') continue;
+      const name = o.genome.token.endsWith(' Prime') ? o.genome.token : `${o.genome.token} Prime`;
+      o.genome = { ...o.genome, token: name, rarity: 'elite', look: { ...o.genome.look, radius: o.genome.look.radius * 1.12 } };
+      o.power *= 1.25;
+    }
+  }
+
   private endWave(): void {
+    for (const [key, leaks] of this.world.leaksBySpecies) {
+      const before = this.leaksRecorded.get(key) ?? 0;
+      for (let i = before; i < leaks; i++) this.bestiary.leak(key);
+      this.leaksRecorded.set(key, leaks);
+    }
     const spent = (this.lastPlan?.chatThreat ?? 0) + (this.lastPlan?.wildThreat ?? 0);
     this.world.gold += Math.round(spent * BALANCE.waveClearBonus);
     if (this.wave >= BALANCE.totalWaves) {
