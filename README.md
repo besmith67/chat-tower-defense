@@ -55,7 +55,7 @@ Skip the setup screen by adding options to the URL. This is handy for an OBS bro
 ?channel=yourname&mode=blended&names=1&autostart=1
 ```
 
-`mode` is `blended`, `chat-only`, or `offline`. `names=0` hides viewer names.
+`mode` is `blended`, `chat-only`, or `offline`. `map` is `switchback`, `twin`, or `spiral`. `names=0` hides viewer names.
 
 ## How chat words become monsters
 

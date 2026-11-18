@@ -266,3 +266,29 @@ describe('tower upgrades', () => {
     expect(world.placeTower('needle', 3, 3)!.def.damage).toBe(7);
   });
 });
+
+describe('maps', () => {
+  it('builds every map with connected roads that end at the base', async () => {
+    const { MAPS, createMap } = await import('../src/sim/map');
+    for (const def of MAPS) {
+      const map = createMap(def);
+      for (const portal of ['chat', 'wilds'] as const) {
+        const end = map.paths[portal].pointAt(map.paths[portal].length);
+        expect(Math.hypot(end.x - map.base.x, end.y - map.base.y)).toBeLessThan(1);
+        expect(map.paths[portal].length).toBeGreaterThan(800);
+      }
+      expect(def.chat[def.chat.length - 1]).toEqual(def.shared[0]);
+      expect(def.wilds[def.wilds.length - 1]).toEqual(def.shared[0]);
+    }
+  });
+
+  it('lets an undefended monster reach the base on every map', async () => {
+    const { MAPS } = await import('../src/sim/map');
+    for (const def of MAPS) {
+      const world = new World(0, 20, def.id);
+      world.queueWave([order('snail')], 1);
+      run(world, 200);
+      expect(world.lives).toBe(19);
+    }
+  });
+});

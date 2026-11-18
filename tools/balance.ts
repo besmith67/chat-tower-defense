@@ -49,7 +49,9 @@ function coverage(match: Match, col: number, row: number, range: number): number
   const x = col * TILE + TILE / 2;
   const y = row * TILE + TILE / 2;
   let score = 0;
-  for (const path of Object.values(match.world.map.paths)) {
+  // Offline, only the Wilds portal sends monsters, so only its road is worth covering.
+  const paths = chatMode ? Object.values(match.world.map.paths) : [match.world.map.paths.wilds];
+  for (const path of paths) {
     for (let d = 0; d < path.length; d += 10) {
       const p = path.pointAt(d);
       if (Math.hypot(p.x - x, p.y - y) <= range) score++;
@@ -131,7 +133,7 @@ const towerTally: Record<string, number> = {};
 const leaks = new Map<string, { count: number; lives: number }>();
 const livesByWave = new Map<number, number[]>();
 for (let i = 0; i < runs; i++) {
-  const match = new Match({ mode: chatMode ? 'blended' : 'offline', seed: 1000 + i });
+  const match = new Match({ mode: chatMode ? 'blended' : 'offline', seed: 1000 + i, map: process.env.MAP });
   let lastWave = 0;
   while (match.phase === 'build' || match.phase === 'wave') {
     if (match.phase === 'build') {

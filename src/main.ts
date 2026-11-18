@@ -6,6 +6,7 @@ import { TwitchChatSource } from './chat/twitch';
 import { GameScene } from './game/GameScene';
 import { settingsFromUrl, type GameSettings } from './game/settings';
 import { LAYOUT } from './game/theme';
+import { MAPS } from './sim/map';
 import { loadStudio } from './sim/studio';
 import { openBestiary } from './studio/bestiaryView';
 import { openStudio } from './studio/studioView';
@@ -18,6 +19,9 @@ const fromUrl = settingsFromUrl(location.search);
 const field = <T extends HTMLElement>(name: string) => setup.elements.namedItem(name) as T;
 if (fromUrl.channel) field<HTMLInputElement>('channel').value = fromUrl.channel;
 if (fromUrl.showNames !== undefined) field<HTMLInputElement>('showNames').checked = fromUrl.showNames;
+const mapSelect = field<HTMLSelectElement>('map');
+mapSelect.replaceChildren(...MAPS.map((m) => new Option(`${m.name}: ${m.blurb}`, m.id)));
+if (fromUrl.map) mapSelect.value = fromUrl.map;
 if (fromUrl.mode) {
   const radio = setup.querySelector<HTMLInputElement>(`input[name="mode"][value="${fromUrl.mode}"]`);
   if (radio) radio.checked = true;
@@ -31,6 +35,7 @@ setup.addEventListener('submit', (e) => {
     channel: String(data.get('channel') ?? '').trim(),
     studio: loadStudio(String(data.get('channel') ?? '').trim()),
     showNames: data.get('showNames') === 'on',
+    map: String(data.get('map') ?? 'switchback'),
     blocklist: String(data.get('blocklist') ?? '')
       .split(',')
       .map((w) => w.trim())

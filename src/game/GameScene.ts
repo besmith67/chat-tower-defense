@@ -9,7 +9,7 @@ import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '..
 import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emoteGenes';
 import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
-import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
+import { COLS, ROWS, TILE, tileKey } from '../sim/map';
 import type { WavePlan } from '../sim/collector';
 import type { CrowdEvent } from '../sim/crowd';
 import { Bestiary } from '../sim/bestiary';
@@ -97,7 +97,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = this.registry.get('settings');
     this.hub = this.registry.get('hub');
     setStreamerBlocklist(this.settings.blocklist);
-    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel) });
+    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel), map: this.settings.map });
     this.match.collector.setShowNames(this.settings.showNames);
     this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
@@ -274,8 +274,8 @@ export class GameScene extends Phaser.Scene {
     this.add.text(sx(wp.x) + 2, sy(wp.y) + 34, 'WILDS', text({ fontSize: '13px', color: COLORS.wildsText, fontStyle: 'bold' })).setOrigin(0, 0).setDepth(2);
 
     // Base.
-    const bx = sx(BASE_TILE[0] * TILE + TILE / 2);
-    const by = sy(BASE_TILE[1] * TILE + TILE / 2);
+    const bx = sx(this.match.world.map.base.x);
+    const by = sy(this.match.world.map.base.y);
     g.fillStyle(0xffffff, 1);
     g.fillRoundedRect(bx - 19, by - 16, 38, 34, 6);
     for (let i = 0; i < 3; i++) g.fillRect(bx - 19 + i * 14, by - 24, 10, 10);
@@ -415,7 +415,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · U upgrade · S sell · F speed · B book · M mute', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, 'U upgrade · S sell · F speed · B bestiary · M mute', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }

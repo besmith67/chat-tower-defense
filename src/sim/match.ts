@@ -14,13 +14,15 @@ export interface MatchOptions {
   mode: ChatMode;
   seed?: number;
   bestiary?: Bestiary;
+  /** Map id from MAPS. Defaults to the first map. */
+  map?: string;
 }
 
 /** Leaks it takes for a species to evolve into its Prime form for the rest of the run. */
 export const EVOLVE_AT = 3;
 
 export class Match {
-  readonly world = new World();
+  readonly world: World;
   readonly collector = new SpawnCollector();
   readonly mode: ChatMode;
   phase: Phase = 'build';
@@ -48,6 +50,7 @@ export class Match {
 
   constructor(options: MatchOptions) {
     this.mode = options.mode;
+    this.world = new World(undefined, undefined, options.map);
     this.rng = mulberry32(options.seed ?? Date.now());
     this.bestiary = options.bestiary ?? new Bestiary();
   }
