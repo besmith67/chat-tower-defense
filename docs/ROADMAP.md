@@ -32,7 +32,7 @@ Or just "do the next package", which means the first package below whose status 
 
 | ID | Action | Status |
 |---|---|---|
-| U1 | Run `gh auth refresh -h github.com -s workflow`, then push so the CI and deploy workflows land. | user |
+| U1 | Run `gh auth refresh -h github.com -s workflow`. Then any chat can run `git push -u origin ci-workflows` and open a PR for it. The local `ci-workflows` branch holds the CI and Pages deploy workflows. | user |
 | U2 | Enable GitHub Pages: repo Settings, Pages, Source "GitHub Actions". | user |
 | U3 | Review and merge PR #1 (milestone 1). Later milestone PRs stack on it. | user |
 | U4 | Play a session with a real chat and report what felt good or bad. Best after M2.8. | user |
