@@ -1,8 +1,11 @@
 import type { ChatMode } from '../sim/collector';
+import type { StudioConfig } from '../sim/studio';
 
 export interface GameSettings {
   mode: ChatMode;
   channel: string;
+  /** Emote Studio choices for this channel. */
+  studio: StudioConfig;
   showNames: boolean;
   blocklist: string[];
 }

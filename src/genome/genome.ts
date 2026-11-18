@@ -6,7 +6,11 @@
 import { CURATED_EMOTES, CURATED_NUMBERS, type Archetype } from './curated';
 import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
-import { flipStrongest, parseWord } from './affixes';
+import { flipStrongest, parseWord, type ParsedWord } from './affixes';
+import { EMOTE_SUFFIXES, splitEmoteName } from './emoteName';
+import { readEmoji } from './emoji';
+import { getEmoteGenes, type EmoteGenes } from './emoteGenes';
+import { lookupWord } from './lexicon';
 import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
 import { isBlocked } from './safety';
@@ -16,6 +20,8 @@ import { wildName } from './wildNames';
 export interface GenomeOptions {
   source?: MonsterSource;
   emote?: EmoteRef | null;
+  /** A zero-width emote layered on top, with its name. */
+  overlay?: (EmoteRef & { name: string }) | null;
 }
 
 /** Returns null for empty or blocked tokens. Blocked tokens never spawn anything. */
@@ -24,22 +30,31 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   const emote = options.emote ?? null;
   if (isBlocked(token)) return null;
 
-  const norm = normalizeToken(token);
+  // Emoji become their word ("🔥" reads as fire) but keep their own species and face.
+  const emoji = source === 'chat' ? readEmoji(token) : null;
+  const norm = normalizeToken(emoji ? emoji.word : token);
   if (!norm) return null;
+  if (emoji) norm.raw = emoji.glyph;
 
   const archetype = norm.number !== null ? CURATED_NUMBERS[norm.number] : CURATED_EMOTES[norm.raw.replace(/[!?.]+$/, '')];
-  const key = speciesKey(source, norm, emote);
+  const overlay = source === 'chat' ? options.overlay ?? null : null;
+  const key = speciesKey(source, norm, emote) + (emoji ? `|emoji:${emoji.glyph}` : '') + (overlay ? `|over:${overlay.provider}#${overlay.id}` : '');
   const seed = fnv1a(key);
   const rng = mulberry32(seed);
 
   const form = readForm(norm.root, norm.letters);
+  // An emote's outline counts as much as its name's sound.
+  const image: EmoteGenes | undefined = emote ? getEmoteGenes(emote.id) : undefined;
+  if (image?.sharpness != null) form.sharpness = 0.5 * form.sharpness + 0.5 * image.sharpness;
   const formClass: FormClass = form.sharpness > 0.25 ? 'spiky' : form.sharpness < -0.25 ? 'round' : 'balanced';
   const quirks = archetype ? [...archetype.quirks] : surfaceQuirks(norm, form);
   if (archetype) addSurfaceMood(norm, quirks);
 
   // Layer 3. Wilds names are invented, and curated archetypes and numbers have their own design.
   // Emote names are not typos, so only plain words can become mutants.
-  const parsed = source === 'chat' && !archetype && norm.number === null ? parseWord(norm.root, norm.letters) : null;
+  const readable = source === 'chat' && !archetype && norm.number === null;
+  const named = readable ? readEmoteName(norm.raw.replace(/[!?.]+$/, '')) : null;
+  const parsed = named?.parsed ?? (readable ? parseWord(norm.root, norm.letters) : null);
   const usable = parsed && !(emote && parsed.typoOf) ? parsed : null;
   const word = usable?.word ?? null;
   const affix = usable?.affix ?? null;
@@ -52,6 +67,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
         ability: word.ability,
         affix,
         typoOf: usable?.typoOf ?? null,
+        emoteSuffix: named?.suffix ?? null,
       }
     : null;
   if (meaning) addRoleQuirk(meaning, quirks);
@@ -65,16 +81,22 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   }
 
   let swarm = form.swarm;
+  if (emoji && emoji.count >= 3) swarm = Math.min(6, emoji.count);
   if (norm.number !== null && !archetype) {
     // Plain numbers become a squad of numerals, one per digit.
     swarm = clamp(norm.number.length, 2, 6);
     if (!quirks.includes('cyber')) quirks.push('cyber');
   }
 
-  const superlative = affix === 'mega' || affix === 'est';
+  // A layered emote is a layered monster: rarer, and the top layer can recolor its element.
+  const superlative = affix === 'mega' || affix === 'est' || overlay !== null;
   const elite = archetype?.elite ?? ((superlative || meaning?.rare || (form.letterValue >= 4.2 && form.length >= 3)) && swarm === 1);
-  const weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
-  let element = word?.element ?? null;
+  let weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
+  if (image?.silhouette === 'wide') weights = jitter({ ...weights, hp: weights.hp + 0.06, speed: weights.speed - 0.04 }, rng, 0);
+  if (image?.silhouette === 'tall') weights = jitter({ ...weights, speed: weights.speed + 0.05 }, rng, 0);
+  // For emotes the palette picks the element, as the image is what chat sees.
+  let element = image?.element ?? word?.element ?? null;
+  if (overlay) element = overlayElement(overlay) ?? element;
   // Flipping heat flips the element too: "unfire" is frost.
   if (affix === 'un' && meaning && word && meaning.axes.heat !== word.axes.heat) element = element === 'fire' ? 'frost' : element === 'frost' ? 'fire' : element;
 
@@ -91,13 +113,15 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     punctuation: norm.punctuation,
     quirks: dedupe(quirks),
     weights,
-    look: makeLook(form, source, elite, archetype, swarm, meaning, element, rng),
+    look: withImageHue(makeLook(form, source, elite, archetype, swarm, meaning, element, rng), image),
     swarm,
     archetype: archetype?.title ?? null,
     emote,
+    emoji: emoji?.glyph ?? null,
+    overlay: overlay ? { provider: overlay.provider, id: overlay.id, url: overlay.url } : null,
     meaning,
     element,
-    family: word && meaning?.pos === 'n' ? word.family : null,
+    family: word && meaning?.pos === 'n' ? word.family : named?.prefixFamily ?? null,
   };
 }
 
@@ -139,6 +163,23 @@ function surfaceQuirks(norm: NormalizedToken, form: FormGenes): Quirk[] {
   return quirks;
 }
 
+/**
+ * Reads "pokiHype" as poki + Hype and "catJAM" as cat + JAM. The suffix gives the meaning; a noun
+ * prefix such as "cat" gives the body plan when the suffix is not itself a noun.
+ */
+function readEmoteName(name: string): { parsed: ParsedWord; suffix: string; prefixFamily: Genome['family'] } | null {
+  // Real words keep their own meaning: "Pizza" and "pancake" are not split.
+  if (lookupWord(name.toLowerCase())) return null;
+  const parts = splitEmoteName(name);
+  if (!parts) return null;
+  const key = parts.suffix.toLowerCase();
+  const word = lookupWord(EMOTE_SUFFIXES[key] ?? key);
+  if (!word) return null;
+  const prefix = lookupWord(parts.prefix.toLowerCase());
+  const prefixFamily = prefix && prefix.pos[0] === 'n' ? prefix.family : null;
+  return { parsed: { word, affix: null, typoOf: null }, suffix: parts.suffix, prefixFamily };
+}
+
 /** A typo mutant gets one of these, picked by its own seed. */
 const MUTATIONS: readonly Quirk[] = ['enraged', 'charge', 'shielded', 'regen', 'hop', 'splitter'];
 
@@ -146,7 +187,7 @@ const MUTATIONS: readonly Quirk[] = ['enraged', 'charge', 'shielded', 'regen', '
 const MAX_QUIRKS = 3;
 
 /** Layer 5: verbs become abilities and adjectives become heralds. Nouns are just bodies. */
-const ABILITY_QUIRK: Record<Ability, Quirk> = {
+export const ABILITY_QUIRK: Record<Ability, Quirk> = {
   sprint: 'charge', hop: 'hop', burrow: 'burrow', stealth: 'stealth',
   heal: 'healer', split: 'splitter', steal: 'thief', explode: 'stunburst',
 };
@@ -233,6 +274,20 @@ function makeLook(
     points: 5 + Math.floor(rng() * 4),
     phase: rng() * Math.PI * 2,
   };
+}
+
+/** A zero-width overlay's element: from its image if analyzed, otherwise from its name ("RainTime" reads as rain). */
+function overlayElement(overlay: EmoteRef & { name: string }): Element | null {
+  const genes = getEmoteGenes(overlay.id);
+  if (genes?.element) return genes.element;
+  const parts = splitEmoteName(overlay.name);
+  const word = lookupWord((parts?.prefix ?? overlay.name).toLowerCase()) ?? (parts ? lookupWord(parts.suffix.toLowerCase()) : null);
+  return word?.element ?? null;
+}
+
+/** An analyzed emote's body takes the emote's own dominant color. */
+function withImageHue(look: Look, image: EmoteGenes | undefined): Look {
+  return image?.hue != null ? { ...look, hue: image.hue } : look;
 }
 
 /** Element sets the body color so the counter reads at a glance. */

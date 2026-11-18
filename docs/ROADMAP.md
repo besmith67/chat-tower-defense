@@ -114,17 +114,17 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 
 ---
 
-## Milestone 3: Emotes go deep
+## Milestone 3: Emotes go deep (done except M3.6, in PR #3)
 
 Branch: `milestone-3-emotes`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M3.1 | Emote name splitting: `pokiHype` becomes prefix `poki` plus suffix `Hype`, and the suffix runs through the lexicon. Curated suffix table (Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, GG). | M2.3 | todo |
-| M3.2 | Emote image analysis in the browser: palette to element, transparency mask to silhouette, edge roughness to form. Cache results per emote. Decide whether BTTV images get a proxy or stay as generated faces. | M2.4 | todo |
-| M3.3 | 7TV zero-width emotes as modifier genes on the previous monster (hat, rain, flames). | M3.2 | todo |
-| M3.4 | Emoji: map to their Unicode names and run those through the word pipeline, so 🔥 reads as fire. | M2.3 | todo |
-| M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | todo |
+| M3.1 | Emote name splitting: `pokiHype` becomes prefix `poki` plus suffix `Hype`, and the suffix runs through the lexicon. Curated suffix table (Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, GG). | M2.3 | done: `src/genome/emoteName.ts`. A noun prefix (cat, pepe) lends its family when the suffix is not a noun. Real words like Pizza are never split. |
+| M3.2 | Emote image analysis in the browser: palette to element, transparency mask to silhouette, edge roughness to form. Cache results per emote. Decide whether BTTV images get a proxy or stay as generated faces. | M2.4 | done: `src/genome/emoteGenes.ts` (pure, tested) plus `GameScene.analyzeEmote`. Palette sets element and body hue, outline roughness is averaged with the name's sound, wide or tall silhouettes nudge stats. Pending species refresh when analysis lands, so a species is settled before it spawns. BTTV stays a generated face: a proxy would need a server, and the game has none. Animation (frame count) is not read: canvas only sees the first frame. |
+| M3.3 | 7TV zero-width emotes as modifier genes on the previous monster (hat, rain, flames). | M3.2 | done: in a message like `KEKW RainTime`, the zero-width emote layers onto the emote before it. The layered monster is its own species, an elite, takes the overlay's element (image palette, else its name), and draws the overlay on top of the face. A lone zero-width emote spawns as itself. |
+| M3.4 | Emoji: map to their Unicode names and run those through the word pipeline, so 🔥 reads as fire. | M2.3 | done: 1,914 emoji mapped at build time from emojilib keywords, with chat overrides (😂 laugh, 💀 skull). The emoji is drawn as the face, a run like 🔥🔥🔥 is a swarm, and emoji count inside longer messages like emotes do. Before this, emoji spawned nothing. |
+| M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | done: `src/studio/studioView.ts` (dialog from the setup screen) and `src/sim/studio.ts` (pure, tested). Finds the channel id by joining chat anonymously, lists 7TV, BTTV, and FFZ channel emotes with search. Twitch sub emotes are not listed until M3.6 adds a login. Boss flags are saved for M4.1 to use. |
 | M3.6 | Twitch OAuth (implicit flow, Client ID from U5) and sub-tier rarity for emotes. | U5 | blocked: needs U5 |
 
 ## Milestone 4: Chat as a force

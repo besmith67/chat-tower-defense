@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EmoteDirectory, parse7tvSet, parseBttv, parseFfz } from '../src/chat/emoteDirectory';
 import { extractTokens } from '../src/sim/collector';
+import { makeGenome } from '../src/genome';
 
 describe('emote parsers', () => {
   it('parses 7TV sets and zero-width flags', () => {
@@ -46,5 +47,35 @@ describe('EmoteDirectory loading', () => {
     await new Promise((r) => setTimeout(r, 10));
     expect(dir.lookup('catJAM')?.provider).toBe('7tv');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('zero-width emotes', () => {
+  const msg = (text: string, emotes: { name: string; zeroWidth?: boolean }[]) => ({
+    id: '1', platform: 'local' as const, userId: 'u', userName: 'u', text, at: 0,
+    emotes: emotes.map((e) => ({ provider: '7tv' as const, id: e.name, name: e.name, url: '', zeroWidth: e.zeroWidth ?? false })),
+  });
+
+  it('layers a zero-width emote onto the emote before it', () => {
+    const tokens = extractTokens(msg('KEKW RainTime', [{ name: 'KEKW' }, { name: 'RainTime', zeroWidth: true }]));
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0].text).toBe('KEKW');
+    expect(tokens[0].overlay?.name).toBe('RainTime');
+  });
+
+  it('spawns a lone zero-width emote as itself', () => {
+    const tokens = extractTokens(msg('RainTime', [{ name: 'RainTime', zeroWidth: true }]));
+    expect(tokens[0].text).toBe('RainTime');
+  });
+
+  it('makes a layered monster a distinct, rarer species', () => {
+    const emote = { provider: '7tv' as const, id: 'p1', url: '' };
+    const overlay = { provider: '7tv' as const, id: 'z1', url: '', name: 'RainTime' };
+    const plain = makeGenome('pokiHype', { emote })!;
+    const layered = makeGenome('pokiHype', { emote, overlay })!;
+    expect(layered.key).not.toBe(plain.key);
+    expect(layered.rarity).toBe('elite');
+    expect(layered.overlay?.id).toBe('z1');
+    expect(layered.element).toBe('storm'); // "rain" reads as storm
   });
 });

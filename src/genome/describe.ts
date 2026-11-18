@@ -1,5 +1,6 @@
 /** Human-readable explanations of genes, shared by the inspect panel and docs. */
 import type { Axis, Element, Family } from './lexiconFormat';
+import { getEmoteGenes } from './emoteGenes';
 import type { Genome, Quirk } from './types';
 
 export const QUIRK_INFO: Record<Quirk, { label: string; detail: string }> = {
@@ -81,7 +82,8 @@ export function meaningText(genome: Genome): string | null {
   if (genome.family) parts.push(FAMILY_INFO[genome.family].label);
   else parts.push(m.pos === 'v' ? 'Verb' : m.pos === 'a' ? 'Adjective' : 'Word');
   if (strongest.length) parts.push(`means ${strongest.join(', ')}`);
-  if (m.typoOf) parts.push(`typo of "${m.typoOf}", mutant`);
+  if (m.emoteSuffix) parts.push(`emote ending "${m.emoteSuffix}" reads as "${m.lemma}"`);
+  else if (m.typoOf) parts.push(`typo of "${m.typoOf}", mutant`);
   else if (m.affix) parts.push(`${AFFIX_TEXT[m.affix] ?? m.affix} "${m.lemma}"`);
   else if (m.lemma !== genome.root) parts.push(`from "${m.lemma}"`);
   if (m.rare) parts.push('rare word');
@@ -132,4 +134,16 @@ export function formText(genome: Genome): string {
   if (genome.rarity === 'elite') bits.push('Elite letters');
   if (genome.swarm > 1) bits.push(`Swarm ×${genome.swarm}`);
   return bits.join(' · ');
+}
+
+/** "Emote colors read as Storm · jagged outline", or null when the image was not analyzed. */
+export function imageText(genome: Genome): string | null {
+  const genes = genome.emote ? getEmoteGenes(genome.emote.id) : undefined;
+  if (!genes) return null;
+  const parts: string[] = [];
+  if (genes.element) parts.push(`Emote colors read as ${ELEMENT_INFO[genes.element].icon} ${ELEMENT_INFO[genes.element].label}`);
+  if (genes.sharpness != null) parts.push(genes.sharpness > 0.2 ? 'jagged outline' : genes.sharpness < -0.2 ? 'smooth outline' : 'plain outline');
+  if (genes.silhouette === 'wide') parts.push('wide, so tankier');
+  if (genes.silhouette === 'tall') parts.push('tall, so faster');
+  return parts.length ? parts.join(' · ') : null;
 }

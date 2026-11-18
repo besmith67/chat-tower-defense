@@ -4,7 +4,8 @@
  * wave's threat budget. In blended and offline modes the Wilds fill the unspent budget.
  */
 import { CURATED_EMOTES } from '../genome/curated';
-import { isBlocked, makeGenome, makeWildGenome, type Genome, type Rng } from '../genome';
+import { isBlocked, makeGenome, makeWildGenome, readEmoji, type Genome, type Rng } from '../genome';
+import { applyStudio, type StudioConfig } from './studio';
 import type { ChatEmote, ChatEvent, ChatMessage } from '../chat/types';
 import { BALANCE } from './balance';
 
@@ -18,6 +19,9 @@ export interface Contribution {
 
 export interface PendingSpecies {
   genome: Genome;
+  /** The token as chat typed it, so the genome can be rebuilt when an emote's image is analyzed. */
+  text: string;
+  overlay?: ChatEmote | null;
   contributions: Contribution[];
   firstAt: number;
 }
@@ -54,6 +58,13 @@ export class SpawnCollector {
     this.showNames = show;
   }
 
+  private studio: StudioConfig = {};
+
+  /** The streamer's Emote Studio choices: renames, disabled emotes, signature abilities. */
+  setStudio(config: StudioConfig): void {
+    this.studio = config;
+  }
+
   /** Pending species in the order they will be spent: most copies first, then earliest. */
   get pending(): PendingSpecies[] {
     return [...this.species.values()].sort((a, b) => b.contributions.length - a.contributions.length || a.firstAt - b.firstAt);
@@ -87,7 +98,8 @@ export class SpawnCollector {
     for (const token of tokens) {
       const used = this.perUser.get(message.userId) ?? 0;
       if (used >= this.perViewerCap) break;
-      const genome = makeGenome(token.text, { source: 'chat', emote: token.emote });
+      const made = makeGenome(token.text, { source: 'chat', emote: token.emote, overlay: token.overlay ?? null });
+      const genome = made && applyStudio(made, this.studio);
       if (!genome) continue;
 
       const userName = this.showNames && !isBlocked(message.userName) ? message.userName : 'chat';
@@ -95,7 +107,7 @@ export class SpawnCollector {
       const existing = this.species.get(genome.key);
       if (existing) existing.contributions.push(contribution);
       else {
-        this.species.set(genome.key, { genome, contributions: [contribution], firstAt: message.at });
+        this.species.set(genome.key, { genome, text: token.text, overlay: token.overlay ?? null, contributions: [contribution], firstAt: message.at });
         this.trimBacklog();
       }
       this.perUser.set(message.userId, used + 1);
@@ -108,7 +120,21 @@ export class SpawnCollector {
    * Builds the wave. Species that do not fit the budget carry over to the next wave, so a viewer's
    * word is delayed rather than lost. Per-viewer caps reset for the new window.
    */
+  /**
+   * Rebuilds pending emote species, picking up image analysis that finished after chat first sent
+   * them. The species key never changes, only its look and stats.
+   */
+  refreshEmotes(): void {
+    for (const pending of this.species.values()) {
+      if (!pending.genome.emote && !pending.overlay) continue;
+      const made = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote, overlay: pending.overlay ?? null });
+      const fresh = made && applyStudio(made, this.studio);
+      if (fresh && fresh.key === pending.genome.key) pending.genome = fresh;
+    }
+  }
+
   takeWave(budget: number, mode: ChatMode, rng: Rng): WavePlan {
+    this.refreshEmotes();
     const orders: SpawnOrder[] = [];
     let remaining = budget;
     let chatThreat = 0;
@@ -132,7 +158,7 @@ export class SpawnCollector {
       while (remaining >= BALANCE.unitCost) {
         const genome = makeWildGenome(rng);
         const packSize = 1 + Math.floor(rng() * 3);
-        const pending: PendingSpecies = { genome, contributions: [], firstAt: 0 };
+        const pending: PendingSpecies = { genome, text: genome.token, contributions: [], firstAt: 0 };
         for (let i = 0; i < packSize && remaining >= BALANCE.unitCost; i++) {
           const spent = planSpecies(pending, remaining, orders);
           remaining -= spent;
@@ -167,6 +193,8 @@ export class SpawnCollector {
 interface Token {
   text: string;
   emote: ChatEmote | null;
+  /** A 7TV zero-width emote layered on top of this one, as in "KEKW RainTime". */
+  overlay?: ChatEmote | null;
 }
 
 /**
@@ -182,9 +210,21 @@ export function extractTokens(message: ChatMessage): Token[] {
     const word = unique[0];
     return [{ text: word, emote: emoteByName.get(word) ?? null }];
   }
-  return unique
-    .filter((w) => emoteByName.has(w) || CURATED_EMOTES[w])
-    .map((w) => ({ text: w, emote: emoteByName.get(w) ?? null }));
+  // In longer messages only emotes, curated names, and emoji count, so sentences do not spawn every word.
+  // A zero-width emote layers onto the token before it instead of spawning on its own.
+  const tokens: Token[] = [];
+  for (const w of words) {
+    const emote = emoteByName.get(w) ?? null;
+    const previous = tokens[tokens.length - 1];
+    if (emote?.zeroWidth && previous && !previous.overlay) {
+      previous.overlay = emote;
+      continue;
+    }
+    if (!(emote || CURATED_EMOTES[w] || readEmoji(w))) continue;
+    if (tokens.some((t) => t.text === w && !t.overlay)) continue;
+    tokens.push({ text: w, emote });
+  }
+  return tokens;
 }
 
 function speciesCost(pending: PendingSpecies): number {

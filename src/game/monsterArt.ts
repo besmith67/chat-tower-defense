@@ -18,7 +18,7 @@ export interface MonsterTexture {
 const cache = new Map<string, MonsterTexture>();
 
 export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterTexture {
-  const key = `mon:${genome.key}:${genome.look.radius.toFixed(1)}`;
+  const key = `mon:${genome.key}:${genome.look.radius.toFixed(1)}:${genome.look.hue}:${genome.form.sharpness.toFixed(2)}`;
   const cached = cache.get(key);
   if (cached && scene.textures.exists(key)) return cached;
 
@@ -109,8 +109,8 @@ export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterText
   }
 
   if (family) drawPlanOnBody(g, genome, cx, cy, R, palette);
-  if (!genome.emote) drawFace(g, genome, cx, cy, R);
-  if (family === 'meme' && !genome.emote) drawShades(g, genome, cx, cy, R);
+  if (!genome.emote && !genome.emoji) drawFace(g, genome, cx, cy, R);
+  if (family === 'meme' && !genome.emote && !genome.emoji) drawShades(g, genome, cx, cy, R);
 
   g.generateTexture(key, w, h);
   g.destroy();

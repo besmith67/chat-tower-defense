@@ -210,12 +210,13 @@ Twitch global emotes, Twitch channel emotes, 7TV, BTTV, FFZ, YouTube channel emo
 - **Palette.** The dominant colors pick the element. Red and orange lean fire, blue leans ice, green leans nature or poison, yellow leans storm, purple leans arcane, gray leans metal, and very dark images lean shadow.
 - **Silhouette.** The transparency mask sets the hitbox and movement style. Wide shapes crawl, tall shapes walk, and round shapes roll.
 - **Edge sharpness.** Jagged outlines push toward spiky form. Smooth outlines push toward round form.
-- **Animation.** Animated emotes are phasing monsters. Frame count sets the rhythm of their ability.
+- **Animation.** Animated emotes are phasing monsters. Frame count sets the rhythm of their ability. (Not built: a canvas only sees the first frame.)
+- **Shipped.** The game reads each emote's image once at 32 by 32 pixels. Palette sets the element and the body color; a mostly gray image is Stone and a mostly dark one is Spirit. Outline roughness is averaged with the name's sound to set the form, but only when the emote has a transparent background. Wide silhouettes get more health and tall ones more speed. The inspect panel says what the image contributed.
 - **The emote is the face.** The image is drawn onto the generated body, so every monster looks like the emote chat typed.
 
 ### Reading the emote name
 
-Channel emotes are usually a channel prefix plus a meaningful suffix, as in `pokiHype` or `xqcL`. The generator splits the name and runs the suffix through the word pipeline. Common suffixes such as Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, and GG are curated.
+Channel emotes are usually a channel prefix plus a meaningful suffix, as in `pokiHype` or `xqcL`. The generator splits the name and runs the suffix through the word pipeline. Common suffixes such as Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, and GG are curated (shipped in `src/genome/emoteName.ts`). In an emote name, L means love and W means win. Third-party emotes often pair a creature with an action, as in `catWait` or `peepoHappy`; a noun prefix lends its body plan when the suffix is not a noun.
 
 ### Rarity from entitlement
 
@@ -235,7 +236,7 @@ Rarer monsters are stronger and cost more of the wave budget.
 
 ### Zero-width emotes
 
-7TV zero-width emotes overlay the emote before them. They become modifier genes on that monster, such as a hat, rain, or flames. A layered emote is literally a layered monster.
+7TV zero-width emotes overlay the emote before them. They become modifier genes on that monster, such as a hat, rain, or flames. A layered emote is literally a layered monster. Shipped: the layered monster is a separate species, an elite, takes the overlay's element, and wears the overlay image.
 
 ### Curated archetypes
 
@@ -263,7 +264,7 @@ A setup screen for the streamer.
 3. The streamer reviews them. They can rename a species, pick its signature ability from the catalog, add lore, disable it, or mark it as a boss candidate.
 4. The channel's signature emote can become the channel's final boss.
 
-Emoji follow the same path as words. Their official Unicode names feed the word pipeline, so 🔥 reads as `fire`.
+Emoji follow the same path as words, so 🔥 reads as `fire`. Shipped: the lexicon build maps each emoji to one word from its emojilib keywords, preferring its one-word name, then a seeded word, with hand overrides for chat meanings (😂 is laugh, 💀 is skull, 🧢 is nocap). An emoji keeps its own species and is drawn as the monster's face. A run of the same emoji is a swarm of up to six.
 
 ## Layer 7: Crowd
 

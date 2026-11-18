@@ -77,6 +77,8 @@ export interface Meaning {
   affix: string | null;
   /** Set for typo mutants: the word chat almost typed. */
   typoOf: string | null;
+  /** Set when the meaning came from an emote name's suffix, such as "Hype" in "pokiHype". */
+  emoteSuffix: string | null;
 }
 
 export interface Genome {
@@ -100,6 +102,10 @@ export interface Genome {
   /** Set for curated emotes and meme numbers. Shown in the inspect panel. */
   archetype: string | null;
   emote: EmoteRef | null;
+  /** Set when chat sent an emoji. It is drawn as the face. */
+  emoji: string | null;
+  /** A 7TV zero-width emote layered on top of the face. */
+  overlay: EmoteRef | null;
   /** Null for invented words, Wilds, numbers, and curated archetypes. */
   meaning: Meaning | null;
   element: Element | null;

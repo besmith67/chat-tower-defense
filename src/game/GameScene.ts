@@ -6,7 +6,8 @@ import Phaser from 'phaser';
 import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
 import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
-import { FAMILY_INFO, QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
+import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emoteGenes';
+import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import { Match } from '../sim/match';
@@ -20,7 +21,7 @@ interface MonsterView {
   root: Phaser.GameObjects.Container;
   bodyRoot: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Image;
-  face: Phaser.GameObjects.Image | null;
+  face: Phaser.GameObjects.Image | Phaser.GameObjects.Text | null;
   label: Phaser.GameObjects.Text;
   hpBg: Phaser.GameObjects.Rectangle;
   hpFill: Phaser.GameObjects.Rectangle;
@@ -92,6 +93,7 @@ export class GameScene extends Phaser.Scene {
     setStreamerBlocklist(this.settings.blocklist);
     this.match = new Match({ mode: this.settings.mode });
     this.match.collector.setShowNames(this.settings.showNames);
+    this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
     this.towerViews = new Map();
     this.stunMarks = new Map();
@@ -123,6 +125,9 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.onPointerMove(p));
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => this.onPointerDown(p));
     this.load.on('loaderror', (file: Phaser.Loader.File) => this.failedEmotes.add(file.key));
+    this.load.on('filecomplete', (key: string) => {
+      if (key.startsWith('emote:')) this.analyzeEmote(key);
+    });
 
     this.keyHandler = (e) => this.onKey(e);
     window.addEventListener('keydown', this.keyHandler);
@@ -167,6 +172,28 @@ export class GameScene extends Phaser.Scene {
 
   private emoteKey(emote: EmoteRef | ChatEmote): string {
     return `emote:${emote.provider}:${emote.id}`;
+  }
+
+  /**
+   * Reads an emote's pixels once so its palette and outline can shape the species (Layer 6).
+   * Images from hosts without cross-origin access cannot be read and keep their name-only genes.
+   */
+  private analyzeEmote(key: string): void {
+    const id = key.split(':').slice(2).join(':');
+    if (getEmoteGenes(id)) return;
+    try {
+      const source = this.textures.get(key).getSourceImage() as CanvasImageSource;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 32;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.drawImage(source, 0, 0, 32, 32);
+      setEmoteGenes(id, analyzeEmotePixels(ctx.getImageData(0, 0, 32, 32).data, 32, 32));
+      this.match.collector.refreshEmotes();
+      this.refreshPanel();
+    } catch {
+      // Tainted canvas: the host does not allow reading pixels.
+    }
   }
 
   private ensureEmote(emote: EmoteRef | ChatEmote): void {
@@ -405,6 +432,7 @@ export class GameScene extends Phaser.Scene {
       const icon = this.add.image(x + 12, y + 12, tex.key).setOrigin(tex.originX, tex.originY).setDepth(91).setAlpha(alpha);
       icon.setScale(Math.min(1, 22 / (p.genome.look.radius * 2)));
       this.panelRows.push(icon);
+      if (p.genome.emoji) this.panelRows.push(this.emojiFace(x + 12, y + 12, p.genome.emoji, 16).setDepth(92).setAlpha(alpha));
       if (p.genome.emote && this.textures.exists(this.emoteKey(p.genome.emote))) {
         this.panelRows.push(this.add.image(x + 12, y + 12, this.emoteKey(p.genome.emote)).setDisplaySize(20, 20).setDepth(92).setAlpha(alpha));
       }
@@ -461,6 +489,7 @@ export class GameScene extends Phaser.Scene {
     const icon = add(this.add.image(x + 30, 488, tex.key).setOrigin(tex.originX, tex.originY).setDepth(91));
     icon.setScale(Math.min(1.6, 54 / (g.look.radius * 2)));
     if (g.emote && this.textures.exists(this.emoteKey(g.emote))) add(this.add.image(x + 30, 488, this.emoteKey(g.emote)).setDisplaySize(40, 40).setDepth(92));
+    if (g.emoji) add(this.emojiFace(x + 30, 488, g.emoji, 32).setDepth(92));
 
     add(this.add.text(x + 70, 456, g.token, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
     const origin = g.source === 'wilds' ? '⟡ Wild creature, not from chat' : `sent by ${m.order.sender ?? 'chat'}${m.order.copies > 1 ? ` · ×${m.order.copies} merged` : ''}`;
@@ -469,6 +498,8 @@ export class GameScene extends Phaser.Scene {
     let y = 512;
     const meaning = meaningText(g);
     if (meaning) y += add(this.add.text(x, y, meaning, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
+    const image = imageText(g);
+    if (image) y += add(this.add.text(x, y, image, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
     y += add(this.add.text(x, y, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91)).height + 6;
 
     const bars: [string, number, number][] = [
@@ -600,6 +631,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Places a tower exactly like a click would. Used by scripted playtests. */
+  /** An emoji drawn as text, centered, for monster faces and panel icons. */
+  private emojiFace(x: number, y: number, glyph: string, size: number): Phaser.GameObjects.Text {
+    return this.add.text(x, y, glyph, { fontSize: `${Math.round(size)}px`, fontFamily: 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif' }).setOrigin(0.5);
+  }
+
   /** Debug only: draws the given words' monsters large in a grid over the game, for art review. */
   debugGallery(words: string[], scale = 2.5): void {
     const layer = this.add.container(0, 0).setDepth(500);
@@ -614,6 +650,7 @@ export class GameScene extends Phaser.Scene {
       const x = (i % cols) * cellW + cellW / 2;
       const y = Math.floor(i / cols) * cellH + 90;
       layer.add(this.add.image(x, y, tex.key).setOrigin(tex.originX, tex.originY).setScale(scale));
+      if (genome.emoji) layer.add(this.emojiFace(x + genome.look.radius * 0.08 * scale, y, genome.emoji, genome.look.radius * 1.3 * scale));
       const label = genome.family ? `${word} · ${FAMILY_INFO[genome.family].label}` : word;
       layer.add(this.add.text(x, y + 62, label, text({ fontSize: '15px', fontStyle: 'bold' })).setOrigin(0.5, 0));
     });
@@ -852,13 +889,14 @@ export class GameScene extends Phaser.Scene {
     bodyRoot.add(sprite);
     bodyRoot.setScale(m.order.scale);
 
-    let face: Phaser.GameObjects.Image | null = null;
+    let face: Phaser.GameObjects.Image | Phaser.GameObjects.Text | null = null;
     if (g.emote) {
       const key = this.emoteKey(g.emote);
       const attach = () => {
         if (!root.active || face) return;
         face = this.add.image(g.look.radius * 0.08, -g.look.radius * 0.05, key).setDisplaySize(g.look.radius * 1.45, g.look.radius * 1.45);
-        bodyRoot.add(face);
+        // Right above the body sprite, so a zero-width overlay always stays on top.
+        bodyRoot.addAt(face, 1);
         const v = this.monsterViews.get(m.id);
         if (v) v.face = face;
       };
@@ -867,6 +905,26 @@ export class GameScene extends Phaser.Scene {
         this.ensureEmote(g.emote);
         this.load.once(`filecomplete-image-${key}`, attach);
       }
+    }
+
+    if (g.overlay) {
+      // Zero-width emotes sit on top of the face, a little larger, the way 7TV draws them.
+      const key = this.emoteKey(g.overlay);
+      const size = g.look.radius * 1.9;
+      const attachOverlay = () => {
+        if (!root.active) return;
+        bodyRoot.add(this.add.image(g.look.radius * 0.08, -g.look.radius * 0.1, key).setDisplaySize(size, size));
+      };
+      if (this.textures.exists(key)) attachOverlay();
+      else {
+        this.ensureEmote(g.overlay);
+        this.load.once(`filecomplete-image-${key}`, () => this.time.delayedCall(0, attachOverlay));
+      }
+    }
+
+    if (g.emoji) {
+      face = this.emojiFace(g.look.radius * 0.08, -g.look.radius * 0.05, g.emoji, g.look.radius * 1.3);
+      bodyRoot.add(face);
     }
 
     const wild = g.source === 'wilds';
