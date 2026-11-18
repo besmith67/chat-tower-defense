@@ -91,7 +91,23 @@ A word lands wherever its meaning puts it. `snail` scores slow, small, and soft-
 
 ### Element
 
-The word's nearest element among fire, ice, storm, poison, earth, metal, shadow, light, arcane, and nature. Below a similarity threshold the monster is neutral.
+One of six elements, or neutral: fire, frost, storm, venom, stone, and spirit. Ten elements were too many to read at a glance on stream. Element sets the body color: fire is red, frost is cyan, storm is yellow, venom is green, stone is a dull brown, and spirit is purple.
+
+### How meaning changes the monster (shipped)
+
+- **Stats.** Speed, mass, and hardness bend the speed, health, and armor weights. A full-strength axis moves a stat more than the sharpest spelling, so meaning outranks sound. The total budget never changes.
+- **Size.** Mass scales the body by up to 27 percent either way.
+- **Shape stays with sound.** Meaning never changes the spiky or round class, so the Needle and Hammer counter still reads from shape alone.
+- **Quirks.** The two strongest axes can each add one behavior, up to three quirks in total. Quirks chat typed on purpose, from casing and punctuation, come first.
+
+| Axis value | Quirk |
+|---|---|
+| Life +2 or more | Regen: heals over time |
+| Life -2 or less | Undying: gets back up once at 35 percent health |
+| Presence -2 or less | Stealth: towers see it at 80 percent range, drawn translucent |
+| Presence +3 | Mocking: towers must shoot it first |
+| Mood +3 | Enraged |
+| Order +3 | Confused |
 
 ### Other meaning signals
 
@@ -106,23 +122,30 @@ The word's nearest element among fire, ice, storm, poison, earth, metal, shadow,
 | un-, anti- | Flips the root word's strongest axis |
 | -est | Superlative, so elite |
 | re- | Revives once |
-| -ify, -ize | Transforms partway down the path |
+| -ify, -ize | Transforms partway down the path (not built yet) |
+
+**Shipped.** Affixes and typos apply only to tokens the lexicon does not already know, so `return` stays a word and is never re- plus `turn`. Mega, ultra, and giga add 2 mass and make an elite. Mini, -ling, and -let make a pack of three. Un- and anti- flip the strongest axis, and flipping heat swaps fire and frost. -est makes an elite. Re- adds Undying. A typo is any token one edit away (swap, missing, extra, or wrong letter) from a common word of four or more letters; it takes that word's meaning plus one seeded mutation from enraged, charge, shielded, regen, hop, or splitter. Emote names never count as typos. -ify and -ize need a mid-path transformation with new art and are left for later.
 
 ### How the meaning data is built
 
-This runs offline at build time, not during play.
+This runs offline at build time (`npm run lexicon`), not during play. See `data/lexicon/README.md`.
 
-1. Start from a vocabulary: common English words, Twitch slang, and the most-used global and third-party emote names.
-2. Compute word embeddings with an open embedding model and project each word onto the axes above.
-3. Tag each word with its category, part of speech, and frequency.
-4. Run an LLM review pass to fix slang and meme meanings, then curate by hand.
-5. Ship the result as a small versioned data file. The game needs no model at runtime and works offline.
+1. The vocabulary is every single-word WordNet lemma that appears in SUBTLEX-US subtitle counts at least twice, plus hand-written seeds for slang WordNet lacks. About 34,000 words.
+2. WordNet gives each word its parts of speech, ranked by how often each sense is used, and its family from the lexicographer file of its main noun sense.
+3. Hand-scored seeds in `data/lexicon/seeds.tsv` give axis scores and elements for about 500 words chat is likely to type.
+4. Seed meanings spread through WordNet: synonyms copy a seed, and hypernym, similar-to, derivation, and antonym links pass on a weakened or negated copy. Glosses add small nudges for anchor words like "fast" or "poison".
+5. Subtitle counts give the rarity. Uncommon words of five letters or more become elites. Seeds are never rare.
+6. The result ships as a grouped JSON file of about 390 KB. The game needs no model at runtime and works offline.
 
-Tokens outside the vocabulary skip this layer and rely on form, typos, and affixes. A small in-browser embedding model could cover them later.
+Embeddings were the original plan. WordNet plus seeds was chosen instead because it is small, explainable, and needs no model download. Embeddings can be added later if coverage feels thin.
+
+Tokens outside the vocabulary skip this layer and rely on form, typos, and affixes.
 
 ## Layer 4: Category
 
-The kind of thing a word names sets its family and body plan.
+The kind of thing a word names sets its family and body plan. Shipped: families come from the WordNet lexicographer file of a noun's main sense, or from the seed file. Only words used mainly as nouns get a family; verbs and adjectives are handled by Layer 5. Body plans add parts around the shape (legs, wheels, a halo) and never change the spiky or round outline.
+
+Shipped traits are deliberately small: beast none, construct +armor and wheels, food heals neighbors 15 percent on death, person dodges 15 percent of Needle and Flame shots, body part floats and ignores Frost slows, place has 15 percent more health and 10 percent less speed, elemental squares its element multipliers and halves armor, spirit (abstract) takes 0.8x from Needle and Hammer, sound shouts every 5 seconds to stun towers within 75 px for half a second, and meme has a 30 percent chance to leave a smaller copy on death. Weather is renamed Elemental and Abstract shows as Spirit on screen.
 
 | Family | Example words | Body plan | Signature trait |
 |---|---|---|---|
@@ -157,6 +180,21 @@ Part of speech decides what a token contributes.
 | throw, toss, defenestrate | Hurls a nearby monster forward |
 
 - **Adjectives are auras.** A lone adjective spawns a small herald that buffs the next few monsters. `angry` makes them enraged. `sleepy` slows them but makes them tougher.
+
+**Shipped version of Layer 5.** About 120 verbs map to eight abilities, from seed verbs in `tools/lexicon/build.ts` plus their WordNet synonyms and close links. Each ability is a sim quirk:
+
+| Ability | Seed verbs (examples) | Quirk |
+|---|---|---|
+| Sprint | run, dash, rush, flee, zoom | Charge: bursts of speed |
+| Hop | jump, leap, bounce, yeet | Hop: leaps 45 px every 3 seconds |
+| Burrow | dig, tunnel, drill | Burrow: untargetable 1.2 of every 5 seconds |
+| Stealth | hide, sneak, lurk | Stealth: towers see it at 80 percent range |
+| Heal | heal, mend, fix, repair | Healer: neighbors within 70 px heal 3 percent per second |
+| Split | split, clone, multiply | Splitter: three minis on death |
+| Steal | steal, rob, yoink, loot | Thief: takes gold when it leaks |
+| Explode | explode, burst, blast | Stunburst: stuns the nearest tower on death |
+
+A lone adjective becomes a herald with a 90 px aura instead of the "next few monsters" idea, because an aura is visible on stream. The aura passes on the adjective's meaning: speed changes neighbors' speed by 6 percent per point, hardness or mass cuts their damage taken by 6 percent per point, and life heals them 1 percent per point per second. Verbs and adjectives get small bodies. Grammar combos such as `angry snail dig` are still planned.
 - **Grammar combos.** A message can hold up to one adjective, one noun, and one verb, such as `angry snail dig`. It costs more budget than a single word, so single words still matter. This turns chat into a crafting language.
 
 ## Layer 6: Emotes
@@ -290,8 +328,8 @@ The full system is too much for one step. Ship it in phases.
 | Phase | Contents | Status |
 |---|---|---|
 | 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
-| 2 | The meaning data, categories, and verbs as abilities | Next |
-| 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
+| 2 | The meaning data, categories, and verbs as abilities | Done |
+| 3 | Emote image analysis, the Emote Studio, and grammar combos | Next |
 | 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
 
 The implementation lives in `src/genome`. Tower adaptation from Layer 8 shipped early because it is cheap and central to the loop.

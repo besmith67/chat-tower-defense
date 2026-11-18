@@ -5,6 +5,7 @@
 import type { Genome } from '../genome';
 import { BALANCE } from './balance';
 import type { SpawnOrder } from './collector';
+import { elementMultiplier } from './elements';
 import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
 import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
 
@@ -28,6 +29,14 @@ export interface Monster {
   nextBlinkAt: number;
   copeReadyAt: number;
   shieldUp: boolean;
+  /** Set once an undying monster has used its second life. */
+  revived: boolean;
+  burnUntil: number;
+  burnDps: number;
+  /** The Flame tower that set it burning, credited if the burn kills it. */
+  burnBy: Tower | null;
+  nextShoutAt: number;
+  nextHopAt: number;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -52,11 +61,19 @@ export type Effectiveness = 'strong' | 'weak' | 'normal';
 export type SimEvent =
   | { type: 'spawn'; monster: Monster }
   | { type: 'shot'; tower: Tower; target: Monster }
+  | { type: 'chain'; tower: Tower; from: Monster; to: Monster }
   | { type: 'pulse'; tower: Tower }
   | { type: 'hit'; monster: Monster; amount: number; effect: Effectiveness }
   | { type: 'reflect'; monster: Monster }
   | { type: 'shield'; monster: Monster }
   | { type: 'heal'; monster: Monster }
+  | { type: 'revive'; monster: Monster }
+  | { type: 'dodge'; monster: Monster }
+  | { type: 'snack'; monster: Monster; healed: number }
+  | { type: 'shout'; monster: Monster; towers: Tower[] }
+  | { type: 'viral'; monster: Monster }
+  | { type: 'hop'; monster: Monster }
+  | { type: 'steal'; monster: Monster; amount: number }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
   | { type: 'death'; monster: Monster; killer: Tower | null }
@@ -166,8 +183,10 @@ export class World {
     const { genome } = order;
     const w = genome.weights;
     const power = order.power * BALANCE.wavePower(this.wave);
-    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp));
+    const family = genome.family;
+    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp)) * (family === 'place' ? 1.15 : 1);
     const cyber = genome.quirks.includes('cyber') ? 0.15 : 0;
+    const plating = family === 'construct' ? 0.08 : 0;
     const pos = this.map.paths[portal].pointAt(dist);
     const monster: Monster = {
       id: this.nextId++,
@@ -179,8 +198,8 @@ export class World {
       y: pos.y,
       hp: maxHp,
       maxHp,
-      armor: Math.min(BALANCE.maxArmor, w.armor * 0.8 + cyber),
-      speed: BALANCE.baseSpeed + BALANCE.speedRange * w.speed,
+      armor: Math.min(BALANCE.maxArmor, (w.armor * 0.8 + cyber + plating) * (family === 'elemental' ? 0.5 : 1)),
+      speed: ((BALANCE.baseSpeed + BALANCE.speedRange * w.speed) / Math.pow(order.scale, BALANCE.titanSlowExponent)) * (family === 'place' ? 0.9 : 1),
       radius: genome.look.radius * order.scale,
       age: 0,
       slowUntil: 0,
@@ -189,7 +208,13 @@ export class World {
       nextBlinkAt: this.time + 3 + (genome.look.phase % 1.5),
       copeReadyAt: 0,
       shieldUp: genome.quirks.includes('shielded'),
-      bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat)),
+      revived: false,
+      burnUntil: 0,
+      burnDps: 0,
+      burnBy: null,
+      nextShoutAt: this.time + 2 + (genome.look.phase % 2),
+      nextHopAt: this.time + 2 + (genome.look.phase % 1),
+      bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
     };
@@ -198,13 +223,42 @@ export class World {
     return monster;
   }
 
+  /** Burrowers spend 1.2 of every 5 seconds underground, where nothing can hit them. */
+  isBurrowed(m: Monster): boolean {
+    return m.genome.quirks.includes('burrow') && (m.age + m.genome.look.phase) % 5 > 3.8;
+  }
+
+  /** Heralds near this monster, other than itself. */
+  private heraldsNear(m: Monster): Monster[] {
+    return this.monsters.filter(
+      (h) => h !== m && h.alive && h.genome.quirks.includes('herald') && h.genome.meaning && Math.hypot(h.x - m.x, h.y - m.y) < 90,
+    );
+  }
+
   private moveMonsters(dt: number): void {
     const hypeSources = this.monsters.filter((m) => m.genome.quirks.includes('hype'));
+    const healers = this.monsters.filter((m) => m.alive && m.genome.quirks.includes('healer'));
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.age += dt;
+      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      if (this.time < m.burnUntil && m.burnBy) {
+        m.hp -= m.burnDps * elementMultiplier('fire', m.genome.element) * dt;
+        if (m.hp <= 0) {
+          this.finish(m, m.burnBy);
+          if (!m.alive) continue;
+        }
+      }
       let speed = m.speed * this.speedFactor(m);
       if (hypeSources.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) speed *= 1.25;
+      for (const h of this.heraldsNear(m)) {
+        const a = h.genome.meaning!.axes;
+        speed *= 1 + 0.06 * a.speed;
+        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * dt);
+      }
+      if (healers.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) {
+        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      }
       m.dist += speed * dt;
 
       if (m.genome.quirks.includes('blink') && this.time >= m.nextBlinkAt) {
@@ -213,11 +267,29 @@ export class World {
         this.events.push({ type: 'blink', monster: m });
       }
 
+      if (m.genome.quirks.includes('hop') && this.time >= m.nextHopAt) {
+        m.dist += 45;
+        m.nextHopAt = this.time + 3;
+        this.events.push({ type: 'hop', monster: m });
+      }
+
+      if (m.genome.family === 'sound' && this.time >= m.nextShoutAt) {
+        m.nextShoutAt = this.time + 5;
+        const stunned = this.towers.filter((t) => Math.hypot(t.x - m.x, t.y - m.y) < 75);
+        for (const t of stunned) t.stunnedUntil = Math.max(t.stunnedUntil, this.time + 0.5);
+        this.events.push({ type: 'shout', monster: m, towers: stunned });
+      }
+
       const path = this.map.paths[m.portal];
       if (m.dist >= path.length) {
         m.alive = false;
         this.lives = Math.max(0, this.lives - m.livesCost);
         this.events.push({ type: 'leak', monster: m });
+        if (m.genome.quirks.includes('thief')) {
+          const amount = Math.min(this.gold, 4 + 6 * m.livesCost);
+          this.gold -= amount;
+          if (amount > 0) this.events.push({ type: 'steal', monster: m, amount });
+        }
         continue;
       }
       const p = path.pointAt(m.dist);
@@ -248,13 +320,14 @@ export class World {
       tower.cooldownLeft -= dt * (gloomed ? 0.65 : 1);
       if (tower.cooldownLeft > 0) continue;
 
-      if (tower.def.kind === 'frost') {
+      if (tower.def.kind === 'cold') {
         const targets = this.monsters.filter((m) => m.alive && this.inRange(tower, m));
         if (targets.length === 0) continue;
         tower.cooldownLeft = tower.def.cooldown;
         this.events.push({ type: 'pulse', tower });
         for (const m of targets) {
-          m.slowFactor = tower.def.slow ?? 0;
+          // Frost monsters shrug off half the chill. Floating body parts ignore it.
+          m.slowFactor = m.genome.family === 'body' ? 0 : (tower.def.slow ?? 0) * (m.genome.element === 'frost' ? 0.5 : 1);
           m.slowUntil = this.time + (tower.def.slowSeconds ?? 1);
           this.damage(tower, m);
         }
@@ -273,11 +346,39 @@ export class World {
       } else {
         this.damage(tower, target);
       }
+      if (tower.def.chains) this.chain(tower, target);
+    }
+  }
+
+  /** Lightning jumps from the target to the nearest monsters it has not hit yet. */
+  private chain(tower: Tower, first: Monster): void {
+    const hit = new Set([first]);
+    let from = first;
+    let scale = 1;
+    for (let i = 0; i < (tower.def.chains ?? 0); i++) {
+      scale *= tower.def.chainFalloff ?? 1;
+      let next: Monster | null = null;
+      let best = tower.def.chainRange ?? 0;
+      for (const m of this.monsters) {
+        if (!m.alive || hit.has(m)) continue;
+        const d = Math.hypot(m.x - from.x, m.y - from.y);
+        if (d <= best) {
+          best = d;
+          next = m;
+        }
+      }
+      if (!next) return;
+      hit.add(next);
+      this.events.push({ type: 'chain', tower, from, to: next });
+      this.damage(tower, next, scale);
+      from = next;
     }
   }
 
   private inRange(tower: Tower, m: Monster): boolean {
-    const range = tower.def.range * (m.genome.quirks.includes('drowsy') ? 0.65 : 1);
+    if (this.isBurrowed(m)) return false;
+    const q = m.genome.quirks;
+    const range = tower.def.range * (q.includes('drowsy') ? 0.65 : 1) * (q.includes('stealth') ? BALANCE.stealthRange : 1);
     return Math.hypot(m.x - tower.x, m.y - tower.y) <= range + m.radius * 0.5;
   }
 
@@ -296,8 +397,8 @@ export class World {
     return 1 + Math.min(BALANCE.adaptationCap, kills * BALANCE.adaptationPerKill);
   }
 
-  private damage(tower: Tower, m: Monster): void {
-    if (!m.alive) return;
+  private damage(tower: Tower, m: Monster, scale = 1): void {
+    if (!m.alive || this.isBurrowed(m)) return;
     const q = m.genome.quirks;
     if (m.shieldUp) {
       m.shieldUp = false;
@@ -309,11 +410,31 @@ export class World {
       return;
     }
 
-    const formMult = formMultiplier(tower.def.kind, m.genome.formClass);
+    const family = m.genome.family;
+    const kind = tower.def.kind;
+    if (family === 'person' && (kind === 'pierce' || kind === 'fire') && this.chance(m, 0.15)) {
+      this.events.push({ type: 'dodge', monster: m });
+      return;
+    }
+    let element = elementMultiplier(kind, m.genome.element);
+    if (family === 'elemental') element *= element;
+    const physical = family === 'abstract' && (kind === 'pierce' || kind === 'blunt') ? 0.8 : 1;
+    const matchup = formMultiplier(kind, m.genome.formClass) * element * physical;
     const armor = m.armor * armorFactor(tower.def.kind);
-    const amount = tower.def.damage * formMult * (1 - armor) * this.adaptation(tower, m.genome);
+    // Heralds that mean hard or huge toughen the monsters around them.
+    let guard = 1;
+    for (const h of this.heraldsNear(m)) {
+      const a = h.genome.meaning!.axes;
+      guard *= 1 - 0.06 * Math.max(0, a.hardness, a.mass);
+    }
+    const amount = tower.def.damage * scale * matchup * guard * (1 - armor) * this.adaptation(tower, m.genome);
     m.hp -= amount;
-    const effect: Effectiveness = formMult > 1 ? 'strong' : formMult < 1 ? 'weak' : 'normal';
+    const effect: Effectiveness = matchup > 1.01 ? 'strong' : matchup < 0.99 ? 'weak' : 'normal';
+    if (tower.def.burnDps) {
+      m.burnUntil = this.time + (tower.def.burnSeconds ?? 1);
+      m.burnDps = tower.def.burnDps * this.adaptation(tower, m.genome);
+      m.burnBy = tower;
+    }
     this.events.push({ type: 'hit', monster: m, amount, effect });
 
     if (q.includes('panic')) m.panicUntil = this.time + 0.6;
@@ -323,7 +444,19 @@ export class World {
       this.events.push({ type: 'heal', monster: m });
     }
 
-    if (m.hp <= 0) this.kill(m, tower);
+    if (m.hp <= 0) this.finish(m, tower);
+  }
+
+  /** Called when health hits zero. Undying monsters get back up once; everything else dies. */
+  private finish(m: Monster, killer: Tower): void {
+    if (m.genome.quirks.includes('undying') && !m.revived) {
+      m.revived = true;
+      m.hp = m.maxHp * 0.35;
+      m.burnUntil = 0;
+      this.events.push({ type: 'revive', monster: m });
+      return;
+    }
+    this.kill(m, killer);
   }
 
   private kill(m: Monster, killer: Tower): void {
@@ -341,6 +474,23 @@ export class World {
         nearest.stunnedUntil = this.time + 1.2;
         this.events.push({ type: 'stun', tower: nearest });
       }
+    }
+
+    if (m.genome.family === 'food') {
+      let healed = 0;
+      for (const other of this.monsters) {
+        if (!other.alive || other === m || Math.hypot(other.x - m.x, other.y - m.y) > 80) continue;
+        other.hp = Math.min(other.maxHp, other.hp + other.maxHp * 0.15);
+        healed++;
+      }
+      this.events.push({ type: 'snack', monster: m, healed });
+    }
+
+    if (m.genome.family === 'meme' && m.order.cost > 0 && this.chance(m, 0.3)) {
+      const copy: Genome = { ...m.genome, family: null, look: { ...m.genome.look, radius: m.genome.look.radius * 0.7 } };
+      const child = this.spawn({ ...m.order, genome: copy, power: m.order.power * 0.3, cost: 0 }, m.portal, Math.max(0, m.dist - 10));
+      child.bounty = 1;
+      this.events.push({ type: 'viral', monster: child });
     }
 
     if (q.includes('splitter')) {

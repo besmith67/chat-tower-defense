@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EmoteDirectory, parse7tvSet, parseBttv, parseFfz } from '../src/chat/emoteDirectory';
 import { extractTokens } from '../src/sim/collector';
 
@@ -30,5 +30,21 @@ describe('EmoteDirectory.enrich', () => {
     const msg = dir.enrich({ id: '1', platform: 'twitch', userId: 'u', userName: 'u', text: 'we lost again Sadge', emotes: [], at: 0 });
     expect(msg.emotes.map((e) => e.name)).toEqual(['Sadge']);
     expect(extractTokens(msg)[0]).toMatchObject({ text: 'Sadge', emote: { id: 's1' } });
+  });
+});
+
+describe('EmoteDirectory loading', () => {
+  it('applies each provider as it answers, even if another one hangs', async () => {
+    const seventv = { emotes: [{ id: 'abc', name: 'catJAM', flags: 0 }] };
+    vi.stubGlobal('fetch', (url: string) => {
+      if (url.includes('frankerfacez')) return new Promise(() => {}); // never answers
+      if (url.includes('7tv.io')) return Promise.resolve({ ok: true, json: () => Promise.resolve(seventv) });
+      return Promise.resolve({ ok: false, json: () => Promise.resolve(null) });
+    });
+    const dir = new EmoteDirectory();
+    void dir.loadGlobal();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(dir.lookup('catJAM')?.provider).toBe('7tv');
+    vi.unstubAllGlobals();
   });
 });

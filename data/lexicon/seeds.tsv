@@ -1,0 +1,545 @@
+# Hand-scored meanings. Rebuild with `npm run lexicon`.
+#
+# Columns: word  pos  family  element  axes...
+#   pos      n, v, a, r, or - to keep WordNet's dominant part of speech
+#   family   beast construct food person body place elemental abstract sound meme, or -
+#   element  fire frost storm venom stone spirit, or -
+#   axes     sp speed, ma mass, ha hardness, he heat, li life, mo mood (+ hostile), or order (+ chaotic), pr presence (+ loud)
+#            written like sp-2 or he+3, range -3 to +3, omitted means 0
+#
+# Seed the clearest word of a meaning cluster. Synonyms and close WordNet neighbors inherit it.
+
+# --- axis anchors ---
+fast      a  -  -       sp+3
+quick     a  -  -       sp+2
+slow      a  -  -       sp-3
+huge      a  -  -       ma+3
+giant     n  person -   ma+3 ha+1
+tiny      a  -  -       ma-3
+hard      a  -  -       ha+2
+soft      a  -  -       ha-2
+hot       a  -  fire    he+3
+cold      a  -  frost   he-3
+alive     a  -  -       li+2
+dead      a  -  spirit  li-3
+angry     a  -  -       mo+3 pr+1
+kind      a  -  -       mo-2
+chaotic   a  -  -       or+3
+calm      a  -  -       or-2 sp-1 pr-1
+loud      a  -  -       pr+3
+quiet     a  -  -       pr-2
+
+# --- beasts ---
+snail       n beast -       sp-3 ma-1 ha+2 li+1 pr-1
+slug        n beast venom   sp-3 ma-1 ha-2 pr-1
+turtle      n beast -       sp-2 ha+3 li+1 or-1
+tortoise    n beast stone   sp-3 ha+3 ma+1 or-1
+sloth       n beast -       sp-3 ha-1 mo-1 or-1 pr-1
+cheetah     n beast -       sp+3 mo+1
+rabbit      n beast -       sp+2 ma-2 ha-2 mo-2
+bunny       n beast -       sp+2 ma-2 ha-3 mo-3
+cat         n beast -       sp+1 ma-1 ha-1 or+1 pr-1
+kitten      n beast -       sp+1 ma-2 ha-2 mo-2 or+1
+dog         n beast -       sp+1 mo-1 pr+1
+puppy       n beast -       sp+1 ma-2 ha-2 mo-3 pr+1
+wolf        n beast frost   sp+2 mo+2 pr+1
+fox         n beast -       sp+2 ma-1 or+1 pr-1
+bear        n beast -       ma+2 ha+1 mo+2
+lion        n beast fire    sp+1 ma+1 mo+2 pr+2
+tiger       n beast fire    sp+2 ma+1 mo+3
+shark       n beast -       sp+2 ma+1 mo+3 pr-1
+whale       n beast frost   ma+3 sp-1 ha-1 mo-1
+elephant    n beast -       ma+3 sp-1 ha+1 pr+1
+mouse       n beast -       ma-3 sp+2 pr-2
+rat         n beast venom   ma-2 sp+2 or+1 pr-1
+bee         n beast venom   sp+2 ma-3 mo+1 pr+1
+wasp        n beast venom   sp+2 ma-3 mo+3
+spider      n beast venom   sp+1 ma-2 mo+2 pr-2
+snake       n beast venom   sp+1 mo+2 pr-2
+scorpion    n beast venom   ha+2 mo+2
+frog        n beast venom   sp+1 ma-2 ha-2 or+1
+bird        n beast storm   sp+2 ma-2 ha-2 pr+1
+eagle       n beast storm   sp+3 mo+2 pr+1
+owl         n beast spirit  pr-2 or-2
+bat         n beast spirit  sp+2 ma-2 pr-3
+crow        n beast spirit  li-1 or+1 pr+1
+duck        n beast -       sp-1 mo-1 or+1 pr+2
+goose       n beast -       mo+3 or+2 pr+3
+chicken     n beast -       sp-1 ma-1 ha-2 or+2 pr+1
+cow         n beast -       ma+2 sp-1 mo-2
+pig         n beast -       ma+1 sp-1 ha-1 mo-1
+horse       n beast -       sp+3 ma+2
+goat        n beast stone   ha+1 or+2 mo+1
+sheep       n beast -       ha-2 mo-2 or-1
+crab        n beast stone   ha+3 sp-1 mo+1
+lobster     n beast -       ha+2 mo+1
+octopus     n beast -       ha-3 or+1 pr-2
+squid       n beast -       ha-3 sp+1 pr-2
+jellyfish   n beast venom   ha-3 ma-1 pr-1
+fish        n beast -       sp+1 ha-1
+monkey      n beast -       sp+2 or+3 pr+2
+gorilla     n beast -       ma+2 ha+1 mo+2 pr+2
+ant         n beast -       ma-3 ha+1 or-2
+worm        n beast -       sp-2 ma-2 ha-3 pr-2
+caterpillar n beast -       sp-2 ha-2
+butterfly   n beast -       sp+1 ma-3 ha-3 mo-2
+mosquito    n beast venom   sp+2 ma-3 mo+2 pr+1
+fly         n beast -       sp+3 ma-3 or+2
+beetle      n beast stone   ha+2 ma-2
+cockroach   n beast venom   ha+2 li+3 ma-2 pr-1
+penguin     n beast frost   sp-1 mo-2
+hamster     n beast -       ma-3 mo-2
+dinosaur    n beast -       ma+3 ha+1 mo+2 pr+2
+dragon      n beast fire    ma+3 ha+2 mo+3 pr+3
+unicorn     n beast spirit  sp+2 mo-2 pr+1
+phoenix     n beast fire    li+3 sp+2 pr+2
+kraken      n beast frost   ma+3 mo+3
+hydra       n beast venom   li+3 ma+2 mo+2
+slime       n beast venom   ha-3 sp-2 li+1
+tree        n beast -       ma+3 ha+2 sp-3 li+2 pr-1
+flower      n beast -       ma-2 ha-3 li+2 mo-2
+cactus      n beast fire    ha+1 he+2 mo+1
+grass       n beast -       ma-2 ha-2 li+2
+moss        n beast -       sp-3 ha-2 li+1 pr-2
+mushroom    n beast venom   li+1 pr-1
+
+# --- monsters and people ---
+goblin      n person -      sp+1 ma-2 mo+2 or+3
+troll       n person stone  ma+2 ha+2 sp-2 li+2
+orc         n person -      ma+1 mo+3
+ogre        n person -      ma+3 sp-2 mo+1
+golem       n construct stone ma+3 ha+3 sp-3
+robot       n construct storm ha+3 or-3
+cyborg      n construct storm ha+2 or-2
+alien       n person spirit or+2 pr-1
+zombie      n person spirit sp-3 li-3 mo+2 or+1
+skeleton    n person spirit li-3 ha+1 ma-1
+ghost       n abstract spirit sp+1 ha-3 li-3 pr-3
+vampire     n person spirit li-2 mo+2 pr-2
+werewolf    n beast spirit  sp+2 mo+3
+witch       n person spirit mo+1 or+1
+wizard      n person spirit or-1
+mummy       n person spirit sp-2 ha-1 li-3
+demon       n abstract fire li-2 mo+3
+angel       n abstract spirit mo-3 pr+2
+reaper      n person spirit li-3 pr-2
+ninja       n person -      sp+3 pr-3
+pirate      n person -      mo+2 or+2
+knight      n person stone  ha+3 or-2
+king        n person -      ma+1 or-2 pr+2
+queen       n person -      ma+1 or-2 pr+2
+baby        n person -      ma-3 ha-3 mo-1 pr+2
+mom         n person -      li+2 mo-2
+dad         n person -      ma+1 mo-1
+clown       n person -      or+3 pr+3
+cop         n person -      or-3 pr+2
+chef        n person fire   he+1
+doctor      n person -      li+2 mo-2
+streamer    n person -      pr+3
+moderator   n person -      or-3
+mod         n person -      or-3
+viewer      n person -      sp-1 pr-1
+lurker      n person -      sp-1 pr-3
+noob        n person -      ma-1 ha-2 or+2
+nerd        n person -      ha-1 or-2
+bot         n construct storm or-3 pr-1
+
+# --- constructs ---
+rocket      n construct fire  sp+3 ha+1 he+2 pr+2
+car         n construct -     sp+2 ha+2 pr+1
+truck       n construct -     sp+1 ma+2 ha+2 pr+2
+train       n construct -     sp+2 ma+3 ha+2 or-3 pr+2
+tank        n construct stone sp-2 ma+3 ha+3 mo+2
+plane       n construct storm sp+3 pr+1
+bus         n construct -     sp+1 ma+2
+bike        n construct -     sp+2 ma-1
+boat        n construct frost sp+1 ma+1
+helicopter  n construct storm sp+2 pr+3
+bomb        n construct fire  mo+3 or+2 pr+3
+nuke        n construct fire  ma+3 mo+3 pr+3
+gun         n construct -     sp+1 mo+3 pr+2
+sword       n construct stone ha+2 mo+2
+shield      n construct stone ha+3 mo-1
+hammer      n construct stone ma+1 ha+3
+axe         n construct -     ha+2 mo+2
+bow         n construct -     sp+2 pr-1
+knife       n construct -     sp+1 ha+1 mo+2
+wall        n construct stone sp-3 ma+2 ha+3
+brick       n construct stone sp-2 ma+1 ha+3
+anvil       n construct stone sp-3 ma+3 ha+3
+magnet      n construct storm ha+2
+battery     n construct storm ha+1
+computer    n construct storm or-2
+phone       n construct storm pr+2
+laser       n construct fire  sp+3 pr+2
+drone       n construct storm sp+2 pr+1
+trap        n construct -     mo+1 pr-2
+cannon      n construct fire  ma+2 pr+3
+chair       n construct -     sp-3 ha+1
+bed         n construct -     sp-3 ha-2 pr-2
+pillow      n construct -     ha-3 mo-2
+balloon     n construct storm sp-1 ma+1 ha-3
+clock       n construct -     or-3
+bell        n construct -     pr+3
+drum        n construct -     pr+3
+coin        n construct stone ma-2 ha+2
+diamond     n construct stone ha+3 pr+2
+crown       n construct spirit pr+2
+mirror      n construct spirit pr+1
+candle      n construct fire  ma-2 he+2 pr+1
+torch       n construct fire  he+2 pr+2
+toilet      n construct -     or+1 pr+1
+
+# --- food ---
+pizza       n food fire   ha-1 he+1 mo-1
+taco        n food fire   he+1 or+1
+burger      n food -      ma+1
+cake        n food -      ha-3 mo-2
+cookie      n food -      ma-1 mo-2
+donut       n food -      ha-2 mo-2
+banana      n food -      li+1 or+1
+apple       n food -      ha+1 li+1
+lemon       n food venom  mo+1
+pepper      n food fire   he+3 mo+2
+chili       n food fire   he+3 mo+2
+icecream    n food frost  ha-2 he-3 mo-2
+cheese      n food -      ha-1 pr+1
+bread       n food -      ha-1 mo-1
+soup        n food fire   ha-3 he+1
+egg         n food -      ma-1 ha+1 li+1
+spaghetti   n food -      ha-2 or+2
+noodle      n food -      ha-2 or+2
+jelly       n food -      ha-3
+candy       n food -      mo-2 pr+1
+popcorn     n food -      sp+1 or+2 pr+2
+coffee      n food storm  sp+3 he+2 or+1
+tea         n food -      he+1 or-2
+milk        n food -      ha-3 mo-2
+beer        n food venom  or+2
+sushi       n food frost  he-1
+garlic      n food venom  mo+1
+onion       n food venom  pr+1
+bacon       n food fire   he+1
+salad       n food -      li+1 mo-2
+potato      n food stone  sp-2 ma+1 ha+1
+carrot      n food -      li+1
+watermelon  n food -      ma+2 ha+1
+water       n elemental - ha-3 he-1 or-1
+
+# --- elements and weather ---
+fire        n elemental fire   sp+1 he+3 mo+2 or+2 pr+2
+flame       n elemental fire   sp+1 he+3 pr+2
+lava        n elemental fire   sp-2 ma+2 ha-1 he+3
+ice         n elemental frost  sp-1 ha+2 he-3
+snow        n elemental frost  ha-2 he-3 pr-1
+frost       n elemental frost  he-2 pr-2
+blizzard    n elemental frost  sp+1 he-3 or+3
+storm       n elemental storm  sp+2 mo+2 or+3 pr+3
+lightning   n elemental storm  sp+3 he+1 pr+3
+thunder     n elemental storm  mo+2 pr+3
+tornado     n elemental storm  sp+3 ma+2 or+3
+hurricane   n elemental storm  ma+3 or+3
+wind        n elemental storm  sp+2 ma-1 ha-3 pr-1
+rain        n elemental storm  ha-3 he-1 pr-1
+cloud       n elemental storm  sp-1 ma+1 ha-3 pr-1
+fog         n elemental spirit sp-1 ha-3 pr-3
+smoke       n elemental fire   ha-3 pr-2
+sun         n elemental fire   ma+3 he+3 li+2 pr+3
+moon        n elemental spirit he-1 or-2 pr+1
+star        n elemental fire   pr+3
+meteor      n elemental fire   sp+3 ma+2 ha+3 mo+2
+comet       n elemental frost  sp+3 ha+1
+earthquake  n elemental stone  ma+3 mo+3 or+3
+avalanche   n elemental frost  sp+2 ma+3 he-2 mo+2 or+3 pr+2
+flood       n elemental -      ma+3 or+2
+mud         n elemental stone  sp-2 ha-2
+sand        n elemental stone  ha-1 or+1
+dust        n elemental -      ma-2 ha-3 pr-1
+rock        n place stone      sp-2 ma+1 ha+3
+stone       n place stone      sp-2 ha+3
+boulder     n place stone      sp-1 ma+3 ha+3
+crystal     n elemental stone  ha+3 pr+1
+metal       n elemental stone  ha+3
+steel       n elemental stone  ha+3
+iron        n elemental stone  ma+1 ha+3
+acid        n elemental venom  ha-3 mo+2
+poison      n elemental venom  li-2 mo+2 pr-1
+plague      n abstract venom   li-3 or+2
+virus       n beast venom      ma-3 li-1 or+2
+germ        n beast venom      ma-3
+shadow      n elemental spirit ha-3 li-1 pr-3
+darkness    n abstract spirit  pr-3
+light       n elemental spirit sp+3 ha-3 pr+3
+void        n abstract spirit  li-2 or+1 pr-3
+magic       n abstract spirit  or+2 pr+1
+soul        n abstract spirit  ha-3 li+1 pr-1
+energy      n abstract storm   sp+2 pr+2
+electricity n elemental storm  sp+3
+spark       n elemental storm  sp+3 ma-3 he+1 pr+1
+ember       n elemental fire   ma-2 he+2 pr+1
+plasma      n elemental storm  sp+2 he+3
+radiation   n elemental venom  li-2 pr-1
+
+# --- places ---
+mountain    n place stone   sp-3 ma+3 ha+3 pr+1
+river       n place -       sp+2 ha-3 or-1
+ocean       n place frost   ma+3 ha-2 or+1
+lake        n place -       sp-2 ha-3 or-2
+cave        n place stone   sp-2 ha+2 pr-3
+forest      n place -       ma+2 li+3 pr-2
+jungle      n place venom   li+3 or+2
+desert      n place fire    he+3 li-2
+swamp       n place venom   sp-2 ha-2 li+1
+castle      n place stone   sp-3 ma+3 ha+3 or-2
+tower       n place stone   sp-3 ma+2 ha+2
+house       n place -       sp-3 ma+2 ha+1 mo-2
+volcano     n place fire    ma+3 he+3 mo+3 pr+3
+hell        n place fire    he+3 li-2 mo+3
+heaven      n place spirit  mo-3 pr+2
+dungeon     n place stone   mo+1 pr-2
+graveyard   n place spirit  li-3 pr-2
+grave       n place spirit  li-3
+
+# --- body ---
+eye         n body -       ma-2 sp-1 pr+2
+tooth       n body stone   ha+2 mo+1
+skull       n body spirit  ha+2 li-3
+bone        n body -       ha+2 li-2
+heart       n body -       li+3
+blood       n body venom   li+1 mo+1
+mouth       n body -       mo+1 pr+2
+belly       n body -       ma+2 ha-2
+muscle      n body -       ma+1 ha+1 mo+1
+brain       n body spirit  or-2
+
+# --- abstract ---
+love        n abstract -      li+2 mo-3 pr+1
+hate        n abstract fire   mo+3
+rage        n abstract fire   sp+1 mo+3 or+2 pr+3
+fear        n abstract spirit sp+1 mo+1 or+1 pr-2
+joy         n abstract -      sp+1 mo-3 pr+2
+chaos       n abstract -      mo+1 or+3 pr+2
+peace       n abstract -      mo-3 or-3 pr-2
+time        n abstract spirit or-3
+death       n abstract spirit li-3 mo+2 pr-1
+life        n abstract -      li+3
+dream       n abstract spirit sp-1 or+2 pr-2
+nightmare   n abstract spirit mo+3 or+2
+luck        n abstract spirit or+3
+war         n abstract fire   mo+3 or+2 pr+3
+hope        n abstract -      li+2 mo-2
+power       n abstract storm  ma+1 mo+1 pr+2
+speed       n abstract -      sp+3
+silence     n abstract -      sp-1 pr-3
+noise       n abstract -      or+2 pr+3
+music       n abstract -      or-2 pr+2
+
+# --- sounds ---
+boom        n sound fire   mo+2 pr+3
+bang        n sound fire   pr+3
+pow         n sound -      mo+2 pr+3
+bonk        n sound -      ha+2 pr+2
+zoom        v sound -      sp+3
+vroom       n sound -      sp+3 pr+2
+crash       n sound stone  or+3 pr+3
+splat       n sound venom  ha-3 pr+1
+buzz        n sound storm  sp+1 pr+2
+zap         v sound storm  sp+3 pr+1
+whoosh      n sound storm  sp+3
+pop         n sound -      ma-2 pr+2
+honk        n sound -      or+1 pr+3
+beep        n sound storm  pr+2
+thud        n sound stone  sp-2 ma+2 ha+2 pr+1
+squeak      n sound -      ma-3 pr+1
+roar        n sound fire   mo+3 pr+3
+hiss        n sound venom  mo+2 pr-1
+meow        n sound -      ma-2 mo-1 or+1
+woof        n sound -      pr+2
+moo         n sound -      sp-1 ma+2
+quack       n sound -      or+2 pr+2
+
+# --- chat slang and memes ---
+yeet        v meme -       sp+3 or+3 pr+2
+bruh        n meme -       sp-2 mo+1 pr+1
+lol         n meme -       or+1 pr+2
+lmao        n meme -       or+3 pr+3
+rofl        n meme -       or+2 pr+2
+xd          n meme -       or+2 pr+2
+omg         n meme -       sp+1 pr+3
+pog         n meme storm   sp+2 mo-1 or+1 pr+3
+poggers     n meme storm   sp+3 or+1 pr+3
+sus         a meme spirit  mo+1 or+2 pr-2
+ratio       n meme -       ma+1 mo+2 pr+2
+gg          n meme -       sp-2 mo-2 or-2
+ez          a meme -       sp+1 mo+1
+based       a meme stone   ha+2 mo+1 or-1
+cringe      n meme venom   li-1 mo+1 pr+1
+bussin      a meme fire    he+1 mo-2 pr+2
+nocap       n meme -       or-2
+rizz        n meme spirit  mo-2 pr+2
+sigma       n meme stone   ha+2 or-2 pr-1
+copium      n meme venom   sp-1 li+1 mo-1 pr-1
+hopium      n meme spirit  li+2
+w           n meme fire    sp+1 mo-1 pr+2
+l           n meme frost   sp-1 mo+1 pr-1
+f           n meme spirit  li-2 pr-1
+hype        n meme storm   sp+2 or+2 pr+3
+clutch      n meme -       sp+2
+gamba       n meme spirit  or+3
+lag         n meme storm   sp-3 or+2
+afk         a meme -       sp-3 pr-3
+brb         n meme -       pr-2
+nerf        v meme -       ma-2 ha-2
+buff        a meme -       ma+2 ha+1
+salty       a meme venom   mo+2
+tilt        v meme fire    mo+2 or+2
+rekt        a meme -       mo+3 or+2
+oof         n meme -       sp-1 pr+1
+uwu         n meme spirit  ma-2 ha-3 mo-3
+owo         n meme spirit  ma-2 ha-2 mo-2
+pepega      n meme -       ha+1 or+3 pr+3
+kek         n meme -       or+2 pr+2
+kekw        n meme -       or+2 pr+3
+lul         n meme -       or+2 pr+2
+monka       n meme spirit  sp+1 mo+1 or+2 pr-1
+chad        n meme stone   ma+2 ha+3 pr+2
+karen       n meme -       mo+3 pr+3
+simp        n meme -       ha-2 mo-3
+npc         n construct - sp-1 or-3 pr-1
+glitch      n meme storm   sp+1 or+3 pr-1
+speedrun    n meme -       sp+3 or-1
+banger      n meme -       pr+3
+seethe      v meme fire    he+2 mo+3
+mald        v meme fire    he+2 mo+3 pr+2
+clap        n meme -       pr+2
+pepe        n meme venom   li+1
+moai        n meme stone   sp-3 ha+3 pr-1
+thicc       a meme -       ma+2 ha+1
+chonky      a meme -       sp-2 ma+3 ha+1
+smol        a meme -       ma-3 mo-3
+ok          n meme -       or-2
+no          n meme -       mo+1 pr+2
+yes         n meme -       mo-2 pr+2
+hi          n meme -       mo-3 pr+1
+hello       n meme -       mo-3 pr+1
+bye         n meme -       sp+2 pr-1
+gn          n meme -       sp-3 pr-3
+hmm         n meme -       sp-2 or-1 pr-1
+huh         n meme -       or+2
+
+# --- verbs ---
+run         v - -       sp+2
+sprint      v - -       sp+3
+dash        v - -       sp+3
+walk        v - -       sp-1
+crawl       v - -       sp-3 ma-1 pr-1
+sneak       v - -       sp-1 pr-3
+hide        v - -       sp-2 pr-3
+jump        v - -       sp+1 or+1
+hop         v - -       sp+1 ma-1
+swim        v - -       sp+1
+dig         v - stone   sp-1 ha+1 pr-2
+burrow      v - stone   ha+1 pr-3
+climb       v - -       sp-1 ha+1
+fight       v - -       mo+3
+attack      v - -       sp+1 mo+3
+bite        v - venom   mo+2
+kill        v - spirit  li-2 mo+3
+punch       v - -       ha+2 mo+2
+kick        v - -       sp+1 mo+2
+smash       v - stone   ha+2 mo+3 pr+2
+crush       v - stone   ma+2 mo+2
+explode     v - fire    mo+3 or+3 pr+3
+burn        v - fire    he+3 mo+2
+freeze      v - frost   sp-2 he-3
+melt        v - fire    ha-3 he+2
+shock       v - storm   sp+2
+heal        v - -       li+3 mo-2
+grow        v - -       sp-1 ma+2 li+3
+eat         v - -       ma+1 mo+1
+sleep       v - -       sp-3 or-2 pr-3
+dance       v - -       sp+1 or+1 pr+2
+sing        v - -       mo-1 pr+3
+scream      v - -       mo+1 or+2 pr+3
+cry         v - frost   mo-1 pr+2
+laugh       v - -       mo-1 or+1 pr+3
+steal       v - -       sp+2 mo+1 pr-2
+rob         v - -       sp+1 mo+2 pr-2
+yoink       v - -       sp+3 pr-1
+throw       v - -       sp+2 mo+1
+split       v - -       or+1
+clone       v - -       or-2
+teleport    v - spirit  sp+3 or+2
+blink       v - -       sp+2
+warp        v - spirit  sp+3 or+2
+spin        v - -       sp+2 or+2
+roll        v - -       sp+2 ha+1
+bounce      v - -       sp+1 ha-2 or+2
+charge      v - storm   sp+3 mo+2
+rush        v - -       sp+3 mo+1
+flee        v - -       sp+3 mo-1
+build       v - -       ha+2 or-2
+shoot       v - -       sp+2 mo+2 pr+2
+stab        v - -       sp+1 mo+3
+summon      v - spirit  or+1
+curse       v - spirit  li-1 mo+2
+haunt       v - spirit  li-3 pr-2
+rot         v - venom   sp-2 li-3
+infect      v - venom   li-2 mo+1
+spit        v - venom   mo+1
+sting       v - venom   mo+2
+block       v - stone   sp-2 ha+3
+protect     v - stone   ha+2 mo-2
+hug         v - -       sp-1 mo-3
+kiss        v - -       mo-3 pr+1
+win         v - -       mo-1 pr+2
+lose        v - -       mo+1 pr-1
+
+# --- adjectives ---
+big         a - -       ma+2
+small       a - -       ma-2
+heavy       a - stone   sp-2 ma+3
+strong      a - -       ha+2 mo+1
+weak        a - -       ma-1 ha-2
+smart       a - spirit  or-2
+dumb        a - -       or+2 pr+1
+crazy       a - -       or+3 pr+2
+wild        a - -       or+3
+evil        a - spirit  li-1 mo+3
+holy        a - spirit  li+1 mo-3 pr+2
+cursed      a - spirit  li-2 mo+2
+lucky       a - spirit  or+2
+sleepy      a - -       sp-2 ha+1 pr-2
+tired       a - -       sp-2 pr-1
+happy       a - -       sp+1 mo-3 pr+2
+sad         a - -       sp-2 li-1 mo-1 pr-2
+mad         a - fire    mo+3 or+2
+scary       a - spirit  mo+2 pr-1
+cute        a - -       ma-2 ha-2 mo-3
+fluffy      a - -       ha-3 mo-2
+spicy       a - fire    he+3 mo+2
+sweet       a - -       mo-3
+sour        a - venom   mo+1
+sticky      a - venom   sp-2
+slimy       a - venom   sp-1 ha-3
+shiny       a - -       ha+1 pr+3
+dark        a - spirit  pr-3
+bright      a - -       pr+3
+invisible   a - spirit  pr-3
+sneaky      a - -       sp+1 pr-3
+lazy        a - -       sp-3
+hungry      a - -       sp+1 mo+2
+massive     a - -       ma+3
+golden      a - stone   ha+2 pr+2
+frozen      a - frost   sp-2 ha+1 he-3
+burning     a - fire    he+3 mo+1
+electric    a - storm   sp+2 pr+1
+toxic       a - venom   li-2 mo+2
+undead      a - spirit  li-3
+immortal    a - spirit  li+3
+ancient     a - stone   sp-2 ha+2 or-1
+broken      a - -       ha-2 or+2
+rusty       a - stone   sp-1 ha+1 li-1
+royal       a - -       or-2 pr+2
+epic        a - -       ma+1 pr+3
+legendary   a - spirit  ma+1 pr+3

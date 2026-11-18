@@ -1,4 +1,5 @@
 import type { FormGenes } from './form';
+import type { Ability, Axes, Element, Family, Pos } from './lexiconFormat';
 import type { CasePattern, PunctuationMood } from './normalize';
 
 export type MonsterSource = 'chat' | 'wilds';
@@ -25,7 +26,15 @@ export type Quirk =
   | 'gloom'     // slows the fire rate of nearby towers
   | 'shielded'  // ignores the first hit
   | 'blink'     // teleports forward every few seconds
-  | 'rhythm';   // moves in bursts on a beat
+  | 'rhythm'    // moves in bursts on a beat
+  | 'regen'     // meaning: alive. Heals over time
+  | 'undying'   // meaning: undead. Gets back up once
+  | 'stealth'   // meaning: hidden, or a sneaking verb. Towers spot it late
+  | 'hop'       // verb: leaps forward every few seconds
+  | 'burrow'    // verb: dives underground, untargetable for a moment
+  | 'healer'    // verb: heals monsters around it
+  | 'thief'     // verb: steals gold if it reaches the base
+  | 'herald';   // adjective: an aura that buffs monsters around it
 
 export interface StatWeights {
   hp: number;
@@ -54,6 +63,22 @@ export interface EmoteRef {
   url: string;
 }
 
+/** What the token means, from the lexicon (Layer 3). */
+export interface Meaning {
+  /** Dictionary form that matched, such as "wolf" for "wolves". */
+  lemma: string;
+  pos: Pos;
+  axes: Axes;
+  /** An uncommon word. Rare words become elites. */
+  rare: boolean;
+  /** Verbs only: the ability the verb maps to. */
+  ability: Ability | null;
+  /** A prefix or suffix that changed the root, such as "mega" in "megasnail". */
+  affix: string | null;
+  /** Set for typo mutants: the word chat almost typed. */
+  typoOf: string | null;
+}
+
 export interface Genome {
   /** Species identity. Identical keys merge in a spawn window. */
   key: string;
@@ -75,4 +100,8 @@ export interface Genome {
   /** Set for curated emotes and meme numbers. Shown in the inspect panel. */
   archetype: string | null;
   emote: EmoteRef | null;
+  /** Null for invented words, Wilds, numbers, and curated archetypes. */
+  meaning: Meaning | null;
+  element: Element | null;
+  family: Family | null;
 }

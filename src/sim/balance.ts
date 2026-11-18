@@ -27,6 +27,10 @@ export const BALANCE = {
   swarmBonus: 1.2,
   maxSwarmMembers: 12,
   maxTitanScale: 2.2,
+  /** Titans are slower the bigger they get: speed divides by scale to this power. */
+  titanSlowExponent: 1,
+  /** Towers see stealthy monsters at this fraction of their range. */
+  stealthRange: 0.8,
 
   /** Each viewer can add this many monsters per spawn window. */
   perViewerCap: 2,
@@ -41,6 +45,8 @@ export const BALANCE = {
 
   /** Gold per threat point when a monster dies, and the share of total threat paid at wave end. */
   bountyPerThreat: 0.4,
+  /** Chat monsters are cleverer than the Wilds, so they pay more. */
+  chatBountyMultiplier: 1.5,
   waveClearBonus: 0.2,
   /** Selling refunds this share of what was paid. */
   sellRefund: 0.7,

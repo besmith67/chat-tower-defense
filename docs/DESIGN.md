@@ -1,6 +1,6 @@
 # Chat Tower Defense: Design Doc
 
-Status: milestone 1 is playable. See [ROADMAP.md](ROADMAP.md).
+Status: milestones 1 and 2 are playable. Words now carry meaning. See [ROADMAP.md](ROADMAP.md).
 
 ## Pitch
 
@@ -24,12 +24,37 @@ In short, each token passes through eight gene layers: identity, form, meaning, 
 
 Towers counter monster tags, and tags come from the generator.
 
-- **Element:** fire, ice, storm, poison, earth, metal, shadow, light, arcane, nature.
-- **Family:** beast, construct, food, person, body, place, weather, abstract, sound, meme.
+- **Element:** fire, frost, storm, venom, stone, spirit.
+- **Family:** beast, construct, food, person, body, place, elemental, abstract, sound, meme.
 - **Form:** spiky monsters are weak to blunt damage. Round monsters are weak to piercing damage.
 - **Special:** stealth monsters need detector towers. Fliers ignore ground blockers.
 
 Each tower hits one or two tags hard and is weak against one. Towers also gain bonus damage against species they have killed many times, so chat must keep changing what it sends.
+
+### Towers (shipped)
+
+| Tower | Hotkey | Cost | Damage kind | Role |
+|---|---|---|---|---|
+| Needle | 1 | 50 | pierce | Fast single target, half armor. Strong vs round, weak vs spiky. |
+| Hammer | 2 | 75 | blunt | Slow splash. Strong vs spiky and swarms, weak vs round. |
+| Frost | 3 | 65 | cold | Pulse that slows everything in range and ignores armor. |
+| Flame | 4 | 70 | fire | Short range. Sets targets burning; burn ignores armor. |
+| Tesla | 5 | 85 | shock | Lightning that chains to three more monsters. |
+
+### Element matchups (shipped)
+
+Each element resists one damage kind (0.7x) and is weak to one (1.4x). These multiply with the shape counter.
+
+| Element | Weak to | Resists |
+|---|---|---|
+| Fire | Frost | Flame |
+| Frost | Flame | Frost (and half the slow) |
+| Storm | Needle | Tesla |
+| Venom | Flame | Hammer |
+| Stone | Tesla | Needle |
+| Spirit | Tesla | Hammer |
+
+About 60 percent of Wilds monsters carry a random element, in a muted color, so offline play still teaches the counters.
 
 ## Scaling and balance
 
@@ -40,7 +65,8 @@ A 20,000-viewer chat cannot be allowed to send 20,000 times the monsters of a 20
 - **Message merging.** Duplicate messages stack into a horde or a titan. Popularity buys power within the budget.
 - **Popular first, nothing lost.** The most-sent species spend the budget first. Species that do not fit wait for the next wave instead of vanishing, and the panel shows which ones are waiting.
 - **Per-user cap.** Each viewer contributes at most one or two monsters per spawn window.
-- **Gold follows threat.** The streamer's income scales with the threat chat spent.
+- **Gold follows threat.** The streamer's income scales with the threat chat spent. Chat monsters pay 50 percent more bounty than the Wilds, because chat sends cleverer monsters.
+- **Titans are slow.** A merged titan's speed divides by its size, so a big spam titan is a slow tank rather than a fast leak.
 - **Chat size normalization.** Sample messages so big and small chats feel equally dangerous at the same level.
 
 ## The Wilds: simulated monsters

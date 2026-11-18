@@ -5,8 +5,8 @@
 import Phaser from 'phaser';
 import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
-import { setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
-import { QUIRK_INFO, formText, weaknessText } from '../genome/describe';
+import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
+import { FAMILY_INFO, QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import { Match } from '../sim/match';
@@ -310,15 +310,12 @@ export class GameScene extends Phaser.Scene {
 
     TOWER_ORDER.forEach((id, i) => {
       const def = TOWERS[id];
-      const b = this.makeButton(12 + i * 206, LAYOUT.bottomY + 9, 198, 56, () => this.selectBuild(id));
-      this.add.image(b.x + 30, b.y + 28, `tower-${id}`).setDepth(92).setScale(0.9);
-      this.add.text(b.x + 60, b.y + 10, def.name, text({ fontSize: '17px', fontStyle: 'bold' })).setDepth(92);
-      this.add.text(b.x + 60, b.y + 32, `◆ ${def.cost}`, text({ fontSize: '14px', color: COLORS.gold })).setDepth(92);
-      this.add.text(b.x + b.w - 10, b.y + 10, `[${def.hotkey}]`, text({ fontSize: '13px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
-      this.add
-        .text(b.x + b.w - 10, b.y + 32, def.kind === 'pierce' ? 'pierce' : def.kind === 'blunt' ? 'blunt' : 'slow', text({ fontSize: '12px', color: COLORS.muted }))
-        .setOrigin(1, 0)
-        .setDepth(92);
+      const b = this.makeButton(12 + i * 124, LAYOUT.bottomY + 9, 118, 56, () => this.selectBuild(id));
+      this.add.image(b.x + 24, b.y + 28, `tower-${id}`).setDepth(92).setScale(0.75);
+      this.add.text(b.x + 44, b.y + 9, def.name, text({ fontSize: '14px', fontStyle: 'bold' })).setDepth(92);
+      this.add.text(b.x + 46, b.y + 30, `◆ ${def.cost}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(92);
+      this.add.text(b.x + b.w - 6, b.y + 4, def.hotkey, text({ fontSize: '10px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
+      this.add.text(b.x + b.w - 7, b.y + 34, def.role, text({ fontSize: '10px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
       this.towerButtons.set(id, b);
     });
 
@@ -375,7 +372,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-3 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -468,7 +465,11 @@ export class GameScene extends Phaser.Scene {
     add(this.add.text(x + 70, 456, g.token, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
     const origin = g.source === 'wilds' ? '⟡ Wild creature, not from chat' : `sent by ${m.order.sender ?? 'chat'}${m.order.copies > 1 ? ` · ×${m.order.copies} merged` : ''}`;
     add(this.add.text(x + 70, 482, g.archetype ? `${g.archetype} · ${origin}` : origin, text({ fontSize: '12px', color: COLORS.muted, wordWrap: { width: 180 } })).setDepth(91));
-    add(this.add.text(x, 522, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91));
+    // Lines stack by measured height, since the meaning line can wrap.
+    let y = 512;
+    const meaning = meaningText(g);
+    if (meaning) y += add(this.add.text(x, y, meaning, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
+    y += add(this.add.text(x, y, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91)).height + 6;
 
     const bars: [string, number, number][] = [
       ['HP', g.weights.hp, 0xff6b8b],
@@ -476,16 +477,18 @@ export class GameScene extends Phaser.Scene {
       ['ARM', g.weights.armor, 0xffd166],
     ];
     bars.forEach(([label, value, color], i) => {
-      const by = 544 + i * 16;
+      const by = y + i * 14;
       add(this.add.text(x, by, label, text({ fontSize: '11px', color: COLORS.muted })).setDepth(91));
       add(this.add.rectangle(x + 34, by + 3, 200, 8, 0x2b2550).setOrigin(0).setDepth(91));
       add(this.add.rectangle(x + 34, by + 3, Math.max(4, 200 * Math.min(1, value * 1.8)), 8, color).setOrigin(0).setDepth(92));
     });
+    y += bars.length * 14 + 6;
 
-    let y = 596;
-    for (const q of g.quirks.slice(0, 3)) {
-      const info = QUIRK_INFO[q];
-      const t = add(this.add.text(x, y, `${info.label}: ${info.detail}`, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91));
+    const lines = g.quirks.slice(0, 3).map((q) => `${QUIRK_INFO[q].label}: ${QUIRK_INFO[q].detail}`);
+    if (g.family && g.family !== 'beast') lines.push(`${FAMILY_INFO[g.family].label}: ${FAMILY_INFO[g.family].trait}`);
+    for (const line of lines) {
+      if (y > 650) break;
+      const t = add(this.add.text(x, y, line, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91));
       y += t.height + 3;
     }
     add(this.add.text(x, Math.min(y + 2, 672), weaknessText(g), text({ fontSize: '12px', color: COLORS.strong, wordWrap: { width: 250 } })).setDepth(91));
@@ -597,6 +600,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Places a tower exactly like a click would. Used by scripted playtests. */
+  /** Debug only: draws the given words' monsters large in a grid over the game, for art review. */
+  debugGallery(words: string[], scale = 2.5): void {
+    const layer = this.add.container(0, 0).setDepth(500);
+    layer.add(this.add.rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.background, 0.96).setOrigin(0));
+    const cols = Math.min(6, words.length);
+    const cellW = LAYOUT.width / cols;
+    const cellH = 170;
+    words.forEach((word, i) => {
+      const genome = makeGenome(word);
+      if (!genome) return;
+      const tex = monsterTexture(this, genome);
+      const x = (i % cols) * cellW + cellW / 2;
+      const y = Math.floor(i / cols) * cellH + 90;
+      layer.add(this.add.image(x, y, tex.key).setOrigin(tex.originX, tex.originY).setScale(scale));
+      const label = genome.family ? `${word} · ${FAMILY_INFO[genome.family].label}` : word;
+      layer.add(this.add.text(x, y + 62, label, text({ fontSize: '15px', fontStyle: 'bold' })).setOrigin(0.5, 0));
+    });
+  }
+
   debugPlace(id: TowerId, col: number, row: number): boolean {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
@@ -657,6 +679,9 @@ export class GameScene extends Phaser.Scene {
       case 'shot':
         this.shotFx(e.tower, e.target);
         break;
+      case 'chain':
+        this.boltFx(sx(e.from.x), sy(e.from.y), sx(e.to.x), sy(e.to.y));
+        break;
       case 'pulse': {
         const ring = this.add.circle(sx(e.tower.x), sy(e.tower.y), 10).setStrokeStyle(3, 0x90e0ef, 0.9).setDepth(40);
         this.tweens.add({ targets: ring, radius: e.tower.def.range, alpha: 0, duration: 380, onComplete: () => ring.destroy() });
@@ -678,6 +703,33 @@ export class GameScene extends Phaser.Scene {
       }
       case 'heal':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, '+cope', '#7cff9b', 12);
+        break;
+      case 'dodge':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'DODGE', '#ffffff', 11);
+        break;
+      case 'snack': {
+        const ring = this.add.circle(sx(e.monster.x), sy(e.monster.y), 10, 0x7cff9b, 0.2).setStrokeStyle(2, 0x7cff9b, 0.8).setDepth(40);
+        this.tweens.add({ targets: ring, radius: 80, alpha: 0, duration: 420, onComplete: () => ring.destroy() });
+        if (e.healed) this.floatText(sx(e.monster.x), sy(e.monster.y) - 18, `snack +${e.healed}`, '#7cff9b', 12);
+        break;
+      }
+      case 'shout': {
+        const ring = this.add.circle(sx(e.monster.x), sy(e.monster.y), 12).setStrokeStyle(3, 0xffffff, 0.8).setDepth(40);
+        this.tweens.add({ targets: ring, radius: 75, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 8, e.monster.genome.token.toUpperCase() + '!', '#ffffff', 13);
+        break;
+      }
+      case 'viral':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
+        break;
+      case 'hop':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'hop', '#ffffff', 11);
+        break;
+      case 'steal':
+        this.floatText(sx(this.match.world.map.base.x), sy(this.match.world.map.base.y) - 52, `-${e.amount} ◆ stolen`, COLORS.gold, 15);
+        break;
+      case 'revive':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'RISES AGAIN', '#c9b6ff', 12);
         break;
       case 'blink':
         this.floatText(sx(e.monster.x), sy(e.monster.y), 'blink', '#d9c6ff', 11);
@@ -706,10 +758,42 @@ export class GameScene extends Phaser.Scene {
     if (t.def.kind === 'pierce') {
       const line = this.add.line(0, 0, sx(t.x), sy(t.y) - 10, sx(target.x), sy(target.y), 0xbdeeff, 0.9).setOrigin(0).setLineWidth(2).setDepth(40);
       this.tweens.add({ targets: line, alpha: 0, duration: 110, onComplete: () => line.destroy() });
+    } else if (t.def.kind === 'fire') {
+      for (let i = 0; i < 3; i++) {
+        const blob = this.add.circle(sx(t.x), sy(t.y) - 8, 5 + i * 2, i === 0 ? 0xffd166 : 0xff6b35, 0.85).setDepth(40);
+        this.tweens.add({
+          targets: blob,
+          x: sx(target.x) + (i - 1) * 5,
+          y: sy(target.y) + (i - 1) * 4,
+          alpha: 0.2,
+          duration: 140 + i * 40,
+          onComplete: () => blob.destroy(),
+        });
+      }
+    } else if (t.def.kind === 'shock') {
+      this.boltFx(sx(t.x), sy(t.y) - 12, sx(target.x), sy(target.y));
     } else {
       const boom = this.add.circle(sx(target.x), sy(target.y), t.def.splash ?? 30, 0xf8961e, 0.28).setStrokeStyle(3, 0xffc078, 0.9).setDepth(40).setScale(0.4);
       this.tweens.add({ targets: boom, scale: 1, alpha: 0, duration: 260, onComplete: () => boom.destroy() });
     }
+  }
+
+  /** A jagged lightning line that fades fast. */
+  private boltFx(x1: number, y1: number, x2: number, y2: number): void {
+    const g = this.add.graphics().setDepth(41);
+    const steps = 6;
+    const nx = -(y2 - y1);
+    const ny = x2 - x1;
+    const len = Math.hypot(nx, ny) || 1;
+    const points: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      const jitter = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 16;
+      points.push(new Phaser.Math.Vector2(x1 + (x2 - x1) * f + (nx / len) * jitter, y1 + (y2 - y1) * f + (ny / len) * jitter));
+    }
+    g.lineStyle(5, 0xffe066, 0.35).strokePoints(points);
+    g.lineStyle(2, 0xffffff, 1).strokePoints(points);
+    this.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
   }
 
   private deathFx(m: Monster): void {
@@ -794,6 +878,14 @@ export class GameScene extends Phaser.Scene {
       .setVisible(!wild);
     const hpBg = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x000000, 0.7).setOrigin(0, 0.5).setVisible(false);
     const hpFill = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x7cff9b).setOrigin(0, 0.5).setVisible(false);
+    // Heralds and healers show their aura so the streamer can see why neighbors got tougher.
+    if (g.quirks.includes('herald') || g.quirks.includes('healer')) {
+      const color = g.quirks.includes('healer') ? 0x7cff9b : 0xffd166;
+      const radius = g.quirks.includes('healer') ? 70 : 90;
+      const aura = this.add.circle(0, 0, radius, color, 0.06).setStrokeStyle(1.5, color, 0.45);
+      root.add(aura);
+      this.tweens.add({ targets: aura, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
+    }
     root.add([bodyRoot, hpBg, hpFill, label]);
 
     let shield: Phaser.GameObjects.Arc | null = null;
@@ -832,10 +924,13 @@ export class GameScene extends Phaser.Scene {
       v.sprite.y = -Math.abs(Math.sin(m.age * 8 + m.genome.look.phase)) * bounce;
       if (v.face) v.face.y = v.sprite.y - m.genome.look.radius * 0.05;
 
-      if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
+      if (w.time < m.burnUntil) v.sprite.setTint(0xffb08a);
+      else if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
       else if (m.genome.quirks.includes('enraged') && m.hp < m.maxHp * 0.6) v.sprite.setTint(0xff9a9a);
       else v.sprite.clearTint();
-      v.root.setAlpha(m.genome.quirks.includes('drowsy') ? 0.7 : 1);
+      const burrowed = w.isBurrowed(m);
+      v.bodyRoot.scaleY = m.order.scale * (burrowed ? 0.35 : 1);
+      v.root.setAlpha(burrowed ? 0.3 : m.genome.quirks.includes('stealth') ? 0.45 : m.genome.quirks.includes('drowsy') ? 0.7 : 1);
 
       if (m.hp < m.maxHp) {
         const frac = Math.max(0, m.hp / m.maxHp);

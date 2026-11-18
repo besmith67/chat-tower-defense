@@ -36,32 +36,44 @@ export class EmoteDirectory {
     return found.length ? { ...message, emotes: [...message.emotes, ...found] } : message;
   }
 
+  /**
+   * Each provider is applied as soon as it answers, so one slow or broken service never blanks the
+   * others. Later providers win name collisions (7TV over BTTV over FFZ), whatever order they arrive in.
+   */
   async loadGlobal(): Promise<void> {
-    const [ffz, bttv, seventv] = await Promise.all([
-      getJson('https://api.frankerfacez.com/v1/set/global'),
-      getJson('https://api.betterttv.net/3/cached/emotes/global'),
-      getJson('https://7tv.io/v3/emote-sets/global'),
+    const parts: ChatEmote[][] = [[], [], []];
+    const apply = () => {
+      this.global.clear();
+      for (const e of parts.flat()) this.global.set(e.name, e);
+    };
+    await Promise.all([
+      getJson('https://api.frankerfacez.com/v1/set/global').then((j) => ((parts[0] = parseFfz(j)), apply())),
+      getJson('https://api.betterttv.net/3/cached/emotes/global').then((j) => ((parts[1] = parseBttv(j)), apply())),
+      getJson('https://7tv.io/v3/emote-sets/global').then((j) => ((parts[2] = parse7tvSet(j)), apply())),
     ]);
-    // Later providers win name collisions: 7TV is the most common today.
-    for (const e of [...parseFfz(ffz), ...parseBttv(bttv), ...parse7tvSet(seventv)]) this.global.set(e.name, e);
   }
 
   async loadChannel(twitchUserId: string): Promise<void> {
     if (this.loadedChannel === twitchUserId) return;
     this.loadedChannel = twitchUserId;
-    const [ffz, bttv, seventv] = await Promise.all([
-      getJson(`https://api.frankerfacez.com/v1/room/id/${twitchUserId}`),
-      getJson(`https://api.betterttv.net/3/cached/users/twitch/${twitchUserId}`),
-      getJson(`https://7tv.io/v3/users/twitch/${twitchUserId}`),
+    const parts: ChatEmote[][] = [[], [], []];
+    const apply = () => {
+      if (this.loadedChannel !== twitchUserId) return;
+      this.channel.clear();
+      for (const e of parts.flat()) this.channel.set(e.name, e);
+    };
+    await Promise.all([
+      getJson(`https://api.frankerfacez.com/v1/room/id/${twitchUserId}`).then((j) => ((parts[0] = parseFfz(j)), apply())),
+      getJson(`https://api.betterttv.net/3/cached/users/twitch/${twitchUserId}`).then((j) => ((parts[1] = parseBttv(j)), apply())),
+      getJson(`https://7tv.io/v3/users/twitch/${twitchUserId}`).then((j) => ((parts[2] = parse7tvSet(j?.emote_set)), apply())),
     ]);
-    this.channel.clear();
-    for (const e of [...parseFfz(ffz), ...parseBttv(bttv), ...parse7tvSet(seventv?.emote_set)]) this.channel.set(e.name, e);
   }
 }
 
-async function getJson(url: string): Promise<Json> {
+/** Gives up after a few seconds, so a hung service cannot stall the others. */
+async function getJson(url: string, timeoutMs = 8000): Promise<Json> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
     return res.ok ? await res.json() : null;
   } catch {
     return null;

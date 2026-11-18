@@ -82,3 +82,154 @@ describe('World', () => {
     expect(types.indexOf('shield')).toBeLessThan(types.indexOf('hit'));
   });
 });
+
+describe('meaning quirks in the sim', () => {
+  it('regenerates living monsters', () => {
+    const world = new World(0, 20);
+    world.queueWave([order('tree')], 1);
+    run(world, 1);
+    const m = world.monsters[0];
+    expect(m.genome.quirks).toContain('regen');
+    m.hp = m.maxHp / 2;
+    run(world, 2);
+    expect(m.hp).toBeGreaterThan(m.maxHp / 2);
+  });
+
+  it('brings undying monsters back once', () => {
+    const world = new World(1000, 20);
+    world.placeTower('hammer', 5, 3);
+    world.queueWave([order('zombie', 0.2)], 1);
+    const events: string[] = [];
+    for (let t = 0; t < 120 && !world.waveDone; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) events.push(e.type);
+    }
+    expect(events).toContain('revive');
+    expect(events.filter((e) => e === 'revive').length).toBe(1);
+  });
+
+  it('makes titans slower than a single copy', () => {
+    const world = new World(0, 20);
+    const single = world.spawn(order('snail'), 'chat', 0);
+    const titan = world.spawn({ ...order('snail'), scale: 2 }, 'chat', 0);
+    expect(titan.speed).toBeLessThan(single.speed);
+  });
+});
+
+describe('family traits', () => {
+  function events(world: World, seconds: number): string[] {
+    const out: string[] = [];
+    for (let t = 0; t < seconds; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) out.push(e.type);
+    }
+    return out;
+  }
+
+  it('reads families from the lexicon', () => {
+    expect(makeGenome('truck')!.family).toBe('construct');
+    expect(makeGenome('pizza')!.family).toBe('food');
+    expect(makeGenome('boom')!.family).toBe('sound');
+    expect(makeGenome('pog')!.family).toBe('meme');
+  });
+
+  it('plates constructs with extra armor', () => {
+    const world = new World(0, 20);
+    const truck = world.spawn(order('truck'), 'chat', 0);
+    const plain = { ...order('truck'), genome: { ...makeGenome('truck')!, family: null } };
+    expect(truck.armor).toBeGreaterThan(world.spawn(plain, 'chat', 0).armor);
+  });
+
+  it('heals neighbors when food dies', () => {
+    const world = new World(1000, 20);
+    world.placeTower('hammer', 2, 3);
+    const friend = world.spawn(order('snail', 5), 'chat', 50);
+    friend.hp = friend.maxHp / 2;
+    world.spawn(order('pizza', 0.1), 'chat', 55);
+    expect(events(world, 2)).toContain('snack');
+  });
+
+  it('lets floating body parts ignore Frost slows', () => {
+    const world = new World(1000, 20);
+    world.placeTower('frost', 2, 3);
+    const eye = world.spawn(order('eye', 5), 'chat', 60);
+    events(world, 2);
+    expect(eye.slowFactor).toBe(0);
+  });
+
+  it('makes sound monsters shout and stun nearby towers', () => {
+    const world = new World(1000, 20);
+    world.placeTower('needle', 2, 3);
+    world.spawn(order('boom', 20), 'chat', 60);
+    expect(events(world, 5)).toContain('shout');
+  });
+});
+
+describe('verbs and adjectives', () => {
+  const g = (t: string) => makeGenome(t)!;
+
+  it('turns verbs into abilities', () => {
+    expect(g('dig').quirks).toContain('burrow');
+    expect(g('heal').quirks).toContain('healer');
+    expect(g('steal').quirks).toContain('thief');
+    expect(g('jump').quirks).toContain('hop');
+    expect(g('sprint').quirks).toContain('charge');
+    expect(g('explode').quirks).toContain('stunburst');
+    expect(g('sneak').quirks).toContain('stealth');
+    expect(g('split').quirks).toContain('splitter');
+    expect(g('digging').quirks).toContain('burrow');
+  });
+
+  it('turns adjectives into heralds and keeps nouns plain', () => {
+    expect(g('angry').quirks).toContain('herald');
+    expect(g('snail').quirks).not.toContain('herald');
+  });
+
+  it('hides burrowers from towers part of the time', () => {
+    const world = new World(1000, 20);
+    world.placeTower('needle', 2, 3);
+    const mole = world.spawn(order('dig', 50), 'chat', 60);
+    let burrowedTime = 0;
+    for (let t = 0; t < 5; t += 1 / 60) {
+      world.step(1 / 60);
+      if (world.isBurrowed(mole)) burrowedTime += 1 / 60;
+    }
+    expect(burrowedTime).toBeGreaterThan(1);
+    expect(burrowedTime).toBeLessThan(2);
+  });
+
+  it('lets thieves steal gold when they leak', () => {
+    const world = new World(500, 20);
+    world.queueWave([order('steal')], 1);
+    const stolen: number[] = [];
+    for (let t = 0; t < 120 && !world.waveDone; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) if (e.type === 'steal') stolen.push(e.amount);
+    }
+    expect(stolen.length).toBe(1);
+    expect(world.gold).toBe(500 - stolen[0]);
+  });
+
+  it('lets a fast herald speed up its neighbors', () => {
+    const world = new World(0, 20);
+    const alone = world.spawn(order('snail'), 'chat', 0);
+    const start = alone.dist;
+    for (let t = 0; t < 1; t += 1 / 60) world.step(1 / 60);
+    const soloDistance = alone.dist - start;
+
+    const world2 = new World(0, 20);
+    const buffed = world2.spawn(order('snail'), 'chat', 0);
+    world2.spawn(order('fast', 50), 'chat', 0);
+    for (let t = 0; t < 1; t += 1 / 60) world2.step(1 / 60);
+    expect(buffed.dist).toBeGreaterThan(soloDistance);
+  });
+
+  it('heals neighbors around a healer', () => {
+    const world = new World(0, 20);
+    const hurt = world.spawn(order('snail'), 'chat', 0);
+    world.spawn(order('heal'), 'chat', 0);
+    hurt.hp = hurt.maxHp / 2;
+    for (let t = 0; t < 1; t += 1 / 60) world.step(1 / 60);
+    expect(hurt.hp).toBeGreaterThan(hurt.maxHp / 2);
+  });
+});

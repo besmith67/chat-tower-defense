@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { makeGenome, makeWildGenome, mulberry32 } from '../src/genome';
 import { readForm } from '../src/genome/form';
 import { normalizeToken } from '../src/genome/normalize';
+import { ELEMENT_HUE } from '../src/genome/genome';
+import { meaningText } from '../src/genome/describe';
 
 describe('normalizeToken', () => {
   it('collapses stretched letters and remembers the stretch', () => {
@@ -132,5 +134,117 @@ describe('makeWildGenome', () => {
       expect(g.token[0]).toBe(g.token[0].toUpperCase());
       expect(g.look.saturation).toBeLessThan(0.3);
     }
+  });
+});
+
+describe('meaning layer', () => {
+  const g = (t: string) => makeGenome(t)!;
+
+  it('makes snail slower and tougher-shelled than rocket', () => {
+    expect(g('snail').weights.speed).toBeLessThan(g('rocket').weights.speed);
+    expect(g('snail').weights.armor).toBeGreaterThan(g('rocket').weights.armor);
+  });
+
+  it('lets meaning outrank sound: an anagram with no meaning is faster than "lazy"', () => {
+    expect(g('zaly').meaning).toBeNull();
+    expect(g('lazy').weights.speed).toBeLessThan(g('zaly').weights.speed);
+  });
+
+  it('gives words an element and colors them by it', () => {
+    const rocket = g('rocket');
+    expect(rocket.element).toBe('fire');
+    expect(Math.abs(rocket.look.hue - ELEMENT_HUE.fire)).toBeLessThanOrEqual(12);
+    expect(g('wolves').element).toBe('frost');
+  });
+
+  it('gives nouns a family and verbs none', () => {
+    expect(g('pizza').family).toBe('food');
+    expect(g('dig').family).toBeNull();
+    expect(g('dig').meaning?.pos).toBe('v');
+  });
+
+  it('turns strong meanings into quirks', () => {
+    expect(g('ghost').quirks).toEqual(expect.arrayContaining(['undying', 'stealth']));
+    expect(g('tree').quirks).toContain('regen');
+    expect(g('dragon').quirks).toContain('enraged');
+  });
+
+  it('caps quirks at three and keeps the ones chat typed first', () => {
+    const loud = g('GHOST?');
+    expect(loud.quirks.slice(0, 2)).toEqual(['enraged', 'confused']);
+    expect(loud.quirks.length).toBeLessThanOrEqual(3);
+  });
+
+  it('makes rare words elite', () => {
+    expect(g('quixotic').rarity).toBe('elite');
+    expect(g('quixotic').meaning?.rare).toBe(true);
+    expect(g('rocket').rarity).toBe('common');
+  });
+
+  it('skips meaning for curated emotes, numbers, and the Wilds', () => {
+    expect(g('KEKW').meaning).toBeNull();
+    expect(g('1337').meaning).toBeNull();
+    expect(makeGenome('fire', { source: 'wilds' })!.meaning).toBeNull();
+  });
+
+  it('describes the meaning in plain words', () => {
+    expect(meaningText(g('snail'))).toBe('Beast · means slow, hard');
+    expect(meaningText(g('wolves'))).toContain('from "wolf"');
+    expect(meaningText(g('zaly'))).toBeNull();
+  });
+});
+
+describe('Wilds elements', () => {
+  it('gives most Wilds an element, in a muted color', () => {
+    const rng = mulberry32(7);
+    const wilds = Array.from({ length: 200 }, () => makeWildGenome(rng));
+    const elemental = wilds.filter((g) => g.element);
+    expect(elemental.length).toBeGreaterThan(80);
+    expect(elemental.length).toBeLessThan(170);
+    for (const g of elemental) expect(g.look.saturation).toBeLessThan(0.3);
+  });
+});
+
+describe('typos and affixes', () => {
+  const g = (t: string) => makeGenome(t)!;
+
+  it('turns a one-letter slip into a mutant of the real word', () => {
+    const fier = g('fier');
+    expect(fier.meaning?.typoOf).toBe('fire');
+    expect(fier.element).toBe('fire');
+    expect(fier.quirks.length).toBeGreaterThan(0);
+    expect(meaningText(fier)).toContain('typo of "fire"');
+    expect(g('snial').meaning?.typoOf).toBe('snail');
+  });
+
+  it('leaves real words and emote-like gibberish alone', () => {
+    expect(g('fire').meaning?.typoOf).toBeNull();
+    expect(g('return').meaning?.affix).toBeNull();
+    expect(g('asdf').meaning).toBeNull();
+  });
+
+  it('makes mega words bigger elites', () => {
+    const mega = g('megasnail');
+    expect(mega.meaning).toMatchObject({ lemma: 'snail', affix: 'mega' });
+    expect(mega.rarity).toBe('elite');
+    expect(mega.look.radius).toBeGreaterThan(g('snail').look.radius);
+  });
+
+  it('makes mini words and -ling words a small pack', () => {
+    expect(g('minisnail').swarm).toBe(3);
+    expect(g('wolfling').swarm).toBe(3);
+    expect(g('wolfling').element).toBe('frost');
+  });
+
+  it('flips the strongest axis with un- and anti-', () => {
+    expect(g('antilove').meaning!.axes.mood).toBeGreaterThan(0);
+    expect(g('unfire').element).toBe('frost');
+    expect(g('unhappy').meaning!.axes.mood).toBeGreaterThan(0);
+  });
+
+  it('makes superlatives elite and re- words undying', () => {
+    expect(g('biggest').rarity).toBe('elite');
+    expect(g('biggest').meaning?.lemma).toBe('big');
+    expect(g('resnail').quirks).toContain('undying');
   });
 });
