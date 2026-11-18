@@ -120,7 +120,7 @@ Branch: `milestone-3-emotes`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M3.1 | Emote name splitting: `pokiHype` becomes prefix `poki` plus suffix `Hype`, and the suffix runs through the lexicon. Curated suffix table (Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, GG). | M2.3 | todo |
+| M3.1 | Emote name splitting: `pokiHype` becomes prefix `poki` plus suffix `Hype`, and the suffix runs through the lexicon. Curated suffix table (Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, GG). | M2.3 | done: `src/genome/emoteName.ts`. A noun prefix (cat, pepe) lends its family when the suffix is not a noun. Real words like Pizza are never split. |
 | M3.2 | Emote image analysis in the browser: palette to element, transparency mask to silhouette, edge roughness to form. Cache results per emote. Decide whether BTTV images get a proxy or stay as generated faces. | M2.4 | todo |
 | M3.3 | 7TV zero-width emotes as modifier genes on the previous monster (hat, rain, flames). | M3.2 | todo |
 | M3.4 | Emoji: map to their Unicode names and run those through the word pipeline, so 🔥 reads as fire. | M2.3 | todo |

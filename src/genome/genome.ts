@@ -6,7 +6,9 @@
 import { CURATED_EMOTES, CURATED_NUMBERS, type Archetype } from './curated';
 import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
-import { flipStrongest, parseWord } from './affixes';
+import { flipStrongest, parseWord, type ParsedWord } from './affixes';
+import { EMOTE_SUFFIXES, splitEmoteName } from './emoteName';
+import { lookupWord } from './lexicon';
 import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
 import { isBlocked } from './safety';
@@ -39,7 +41,9 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
 
   // Layer 3. Wilds names are invented, and curated archetypes and numbers have their own design.
   // Emote names are not typos, so only plain words can become mutants.
-  const parsed = source === 'chat' && !archetype && norm.number === null ? parseWord(norm.root, norm.letters) : null;
+  const readable = source === 'chat' && !archetype && norm.number === null;
+  const named = readable ? readEmoteName(norm.raw.replace(/[!?.]+$/, '')) : null;
+  const parsed = named?.parsed ?? (readable ? parseWord(norm.root, norm.letters) : null);
   const usable = parsed && !(emote && parsed.typoOf) ? parsed : null;
   const word = usable?.word ?? null;
   const affix = usable?.affix ?? null;
@@ -52,6 +56,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
         ability: word.ability,
         affix,
         typoOf: usable?.typoOf ?? null,
+        emoteSuffix: named?.suffix ?? null,
       }
     : null;
   if (meaning) addRoleQuirk(meaning, quirks);
@@ -97,7 +102,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     emote,
     meaning,
     element,
-    family: word && meaning?.pos === 'n' ? word.family : null,
+    family: word && meaning?.pos === 'n' ? word.family : named?.prefixFamily ?? null,
   };
 }
 
@@ -137,6 +142,23 @@ function surfaceQuirks(norm: NormalizedToken, form: FormGenes): Quirk[] {
   if (norm.leet) quirks.push('cyber');
   addSurfaceMood(norm, quirks);
   return quirks;
+}
+
+/**
+ * Reads "pokiHype" as poki + Hype and "catJAM" as cat + JAM. The suffix gives the meaning; a noun
+ * prefix such as "cat" gives the body plan when the suffix is not itself a noun.
+ */
+function readEmoteName(name: string): { parsed: ParsedWord; suffix: string; prefixFamily: Genome['family'] } | null {
+  // Real words keep their own meaning: "Pizza" and "pancake" are not split.
+  if (lookupWord(name.toLowerCase())) return null;
+  const parts = splitEmoteName(name);
+  if (!parts) return null;
+  const key = parts.suffix.toLowerCase();
+  const word = lookupWord(EMOTE_SUFFIXES[key] ?? key);
+  if (!word) return null;
+  const prefix = lookupWord(parts.prefix.toLowerCase());
+  const prefixFamily = prefix && prefix.pos[0] === 'n' ? prefix.family : null;
+  return { parsed: { word, affix: null, typoOf: null }, suffix: parts.suffix, prefixFamily };
 }
 
 /** A typo mutant gets one of these, picked by its own seed. */

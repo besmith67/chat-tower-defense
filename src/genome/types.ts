@@ -77,6 +77,8 @@ export interface Meaning {
   affix: string | null;
   /** Set for typo mutants: the word chat almost typed. */
   typoOf: string | null;
+  /** Set when the meaning came from an emote name's suffix, such as "Hype" in "pokiHype". */
+  emoteSuffix: string | null;
 }
 
 export interface Genome {

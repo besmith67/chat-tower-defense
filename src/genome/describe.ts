@@ -81,7 +81,8 @@ export function meaningText(genome: Genome): string | null {
   if (genome.family) parts.push(FAMILY_INFO[genome.family].label);
   else parts.push(m.pos === 'v' ? 'Verb' : m.pos === 'a' ? 'Adjective' : 'Word');
   if (strongest.length) parts.push(`means ${strongest.join(', ')}`);
-  if (m.typoOf) parts.push(`typo of "${m.typoOf}", mutant`);
+  if (m.emoteSuffix) parts.push(`emote ending "${m.emoteSuffix}" reads as "${m.lemma}"`);
+  else if (m.typoOf) parts.push(`typo of "${m.typoOf}", mutant`);
   else if (m.affix) parts.push(`${AFFIX_TEXT[m.affix] ?? m.affix} "${m.lemma}"`);
   else if (m.lemma !== genome.root) parts.push(`from "${m.lemma}"`);
   if (m.rare) parts.push('rare word');

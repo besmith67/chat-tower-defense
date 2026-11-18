@@ -215,7 +215,7 @@ Twitch global emotes, Twitch channel emotes, 7TV, BTTV, FFZ, YouTube channel emo
 
 ### Reading the emote name
 
-Channel emotes are usually a channel prefix plus a meaningful suffix, as in `pokiHype` or `xqcL`. The generator splits the name and runs the suffix through the word pipeline. Common suffixes such as Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, and GG are curated.
+Channel emotes are usually a channel prefix plus a meaningful suffix, as in `pokiHype` or `xqcL`. The generator splits the name and runs the suffix through the word pipeline. Common suffixes such as Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, and GG are curated (shipped in `src/genome/emoteName.ts`). In an emote name, L means love and W means win. Third-party emotes often pair a creature with an action, as in `catWait` or `peepoHappy`; a noun prefix lends its body plan when the suffix is not a noun.
 
 ### Rarity from entitlement
 
