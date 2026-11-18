@@ -6,6 +6,8 @@ The work is split into **packages**. Each package is sized to fit in one chat se
 
 Or just "do the next package", which means the first package below whose status is `todo` and whose dependencies are `done`.
 
+**State on 2026-11-18:** milestones 1 to 4 and most of 5 are built, each in its own stacked PR (#1 to #5). Every remaining package needs the user first: U1 to U6 below. Until then, the best use of a new chat is bug fixes and tuning from U4 playtest notes. The milestone branches stack, so work on the newest branch (`milestone-5-polish`) and merge order is #1, #2, #3, #4, #5.
+
 ## How a package is worked
 
 1. Read `CLAUDE.md`, this file, and the docs the package lists.
@@ -141,7 +143,7 @@ Branch: `milestone-4-crowd`.
 | M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | done: `src/sim/bestiary.ts` and `src/studio/bestiaryView.ts` (B key in game, or the setup screen). New species and evolutions are announced at wave start. A species that leaks 3 times in a run comes back as its Prime form: elite, 25% more power, a bit bigger. The Abstract family now shows as Idea, so it never reads like the Spirit element. |
 | M4.6 | Channel point redemptions through EventSub WebSocket: rewards that help or hurt the streamer. | M3.6 | blocked: needs U5 |
 
-## Milestone 5: Polish and reach (in progress)
+## Milestone 5: Polish and reach (M5.1 to M5.5 done, in PR #5)
 
 Branch: `milestone-5-polish`.
 
