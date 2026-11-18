@@ -6,7 +6,7 @@
 import { CURATED_EMOTES, CURATED_NUMBERS, type Archetype } from './curated';
 import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
-import { lookupWord } from './lexicon';
+import { flipStrongest, parseWord } from './affixes';
 import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
 import { isBlocked } from './safety';
@@ -38,12 +38,31 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   if (archetype) addSurfaceMood(norm, quirks);
 
   // Layer 3. Wilds names are invented, and curated archetypes and numbers have their own design.
-  const word = source === 'chat' && !archetype && norm.number === null ? lookupWord(norm.root, norm.letters) : null;
+  // Emote names are not typos, so only plain words can become mutants.
+  const parsed = source === 'chat' && !archetype && norm.number === null ? parseWord(norm.root, norm.letters) : null;
+  const usable = parsed && !(emote && parsed.typoOf) ? parsed : null;
+  const word = usable?.word ?? null;
+  const affix = usable?.affix ?? null;
   const meaning: Meaning | null = word
-    ? { lemma: word.lemma, pos: word.pos[0], axes: word.axes, rare: word.zipf <= 2 && word.lemma.length >= 5, ability: word.ability }
+    ? {
+        lemma: word.lemma,
+        pos: word.pos[0],
+        axes: affix === 'un' ? flipStrongest(word.axes) : affix === 'mega' ? { ...word.axes, mass: Math.min(3, word.axes.mass + 2) } : word.axes,
+        rare: word.zipf <= 2 && word.lemma.length >= 5,
+        ability: word.ability,
+        affix,
+        typoOf: usable?.typoOf ?? null,
+      }
     : null;
   if (meaning) addRoleQuirk(meaning, quirks);
+  if (affix === 're' && quirks.length < MAX_QUIRKS) quirks.push('undying');
+  if (meaning?.typoOf && quirks.length < MAX_QUIRKS) quirks.push(pick(mulberry32(seed ^ 0x51ed), MUTATIONS));
   if (meaning) addMeaningQuirks(meaning, quirks);
+  // "minisnail" and "wolfling" come as a small pack.
+  if (affix === 'mini' && form.swarm === 1) {
+    form.swarm = 3;
+    form.swarmUnit = word!.lemma;
+  }
 
   let swarm = form.swarm;
   if (norm.number !== null && !archetype) {
@@ -52,9 +71,12 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     if (!quirks.includes('cyber')) quirks.push('cyber');
   }
 
-  const elite = archetype?.elite ?? ((meaning?.rare || (form.letterValue >= 4.2 && form.length >= 3)) && swarm === 1);
+  const superlative = affix === 'mega' || affix === 'est';
+  const elite = archetype?.elite ?? ((superlative || meaning?.rare || (form.letterValue >= 4.2 && form.length >= 3)) && swarm === 1);
   const weights = archetype?.weights ? jitter(archetype.weights, rng, 0.02) : formWeights(form, norm, meaning, rng);
-  const element = word?.element ?? null;
+  let element = word?.element ?? null;
+  // Flipping heat flips the element too: "unfire" is frost.
+  if (affix === 'un' && meaning && word && meaning.axes.heat !== word.axes.heat) element = element === 'fire' ? 'frost' : element === 'frost' ? 'fire' : element;
 
   return {
     key,
@@ -116,6 +138,9 @@ function surfaceQuirks(norm: NormalizedToken, form: FormGenes): Quirk[] {
   addSurfaceMood(norm, quirks);
   return quirks;
 }
+
+/** A typo mutant gets one of these, picked by its own seed. */
+const MUTATIONS: readonly Quirk[] = ['enraged', 'charge', 'shielded', 'regen', 'hop', 'splitter'];
 
 /** Readability cap: surface quirks come first because chat chose them on purpose. */
 const MAX_QUIRKS = 3;

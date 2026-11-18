@@ -204,3 +204,47 @@ describe('Wilds elements', () => {
     for (const g of elemental) expect(g.look.saturation).toBeLessThan(0.3);
   });
 });
+
+describe('typos and affixes', () => {
+  const g = (t: string) => makeGenome(t)!;
+
+  it('turns a one-letter slip into a mutant of the real word', () => {
+    const fier = g('fier');
+    expect(fier.meaning?.typoOf).toBe('fire');
+    expect(fier.element).toBe('fire');
+    expect(fier.quirks.length).toBeGreaterThan(0);
+    expect(meaningText(fier)).toContain('typo of "fire"');
+    expect(g('snial').meaning?.typoOf).toBe('snail');
+  });
+
+  it('leaves real words and emote-like gibberish alone', () => {
+    expect(g('fire').meaning?.typoOf).toBeNull();
+    expect(g('return').meaning?.affix).toBeNull();
+    expect(g('asdf').meaning).toBeNull();
+  });
+
+  it('makes mega words bigger elites', () => {
+    const mega = g('megasnail');
+    expect(mega.meaning).toMatchObject({ lemma: 'snail', affix: 'mega' });
+    expect(mega.rarity).toBe('elite');
+    expect(mega.look.radius).toBeGreaterThan(g('snail').look.radius);
+  });
+
+  it('makes mini words and -ling words a small pack', () => {
+    expect(g('minisnail').swarm).toBe(3);
+    expect(g('wolfling').swarm).toBe(3);
+    expect(g('wolfling').element).toBe('frost');
+  });
+
+  it('flips the strongest axis with un- and anti-', () => {
+    expect(g('antilove').meaning!.axes.mood).toBeGreaterThan(0);
+    expect(g('unfire').element).toBe('frost');
+    expect(g('unhappy').meaning!.axes.mood).toBeGreaterThan(0);
+  });
+
+  it('makes superlatives elite and re- words undying', () => {
+    expect(g('biggest').rarity).toBe('elite');
+    expect(g('biggest').meaning?.lemma).toBe('big');
+    expect(g('resnail').quirks).toContain('undying');
+  });
+});

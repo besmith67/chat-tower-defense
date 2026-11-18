@@ -73,6 +73,10 @@ export interface Meaning {
   rare: boolean;
   /** Verbs only: the ability the verb maps to. */
   ability: Ability | null;
+  /** A prefix or suffix that changed the root, such as "mega" in "megasnail". */
+  affix: string | null;
+  /** Set for typo mutants: the word chat almost typed. */
+  typoOf: string | null;
 }
 
 export interface Genome {

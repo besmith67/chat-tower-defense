@@ -63,6 +63,10 @@ const AXIS_WORDS: Record<Axis, [string, string]> = {
   presence: ['hidden', 'loud'],
 };
 
+const AFFIX_TEXT: Record<string, string> = {
+  mega: 'mega', mini: 'a pack of mini', un: 'the opposite of', est: 'the most', re: 'returning',
+};
+
 /** "Fire · Beast · means fast, hostile", or null for a token with no meaning. */
 export function meaningText(genome: Genome): string | null {
   const m = genome.meaning;
@@ -77,7 +81,9 @@ export function meaningText(genome: Genome): string | null {
   if (genome.family) parts.push(FAMILY_INFO[genome.family].label);
   else parts.push(m.pos === 'v' ? 'Verb' : m.pos === 'a' ? 'Adjective' : 'Word');
   if (strongest.length) parts.push(`means ${strongest.join(', ')}`);
-  if (m.lemma !== genome.root) parts.push(`from "${m.lemma}"`);
+  if (m.typoOf) parts.push(`typo of "${m.typoOf}", mutant`);
+  else if (m.affix) parts.push(`${AFFIX_TEXT[m.affix] ?? m.affix} "${m.lemma}"`);
+  else if (m.lemma !== genome.root) parts.push(`from "${m.lemma}"`);
   if (m.rare) parts.push('rare word');
   return parts.join(' · ');
 }

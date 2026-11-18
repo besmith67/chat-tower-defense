@@ -122,7 +122,9 @@ One of six elements, or neutral: fire, frost, storm, venom, stone, and spirit. T
 | un-, anti- | Flips the root word's strongest axis |
 | -est | Superlative, so elite |
 | re- | Revives once |
-| -ify, -ize | Transforms partway down the path |
+| -ify, -ize | Transforms partway down the path (not built yet) |
+
+**Shipped.** Affixes and typos apply only to tokens the lexicon does not already know, so `return` stays a word and is never re- plus `turn`. Mega, ultra, and giga add 2 mass and make an elite. Mini, -ling, and -let make a pack of three. Un- and anti- flip the strongest axis, and flipping heat swaps fire and frost. -est makes an elite. Re- adds Undying. A typo is any token one edit away (swap, missing, extra, or wrong letter) from a common word of four or more letters; it takes that word's meaning plus one seeded mutation from enraged, charge, shielded, regen, hop, or splitter. Emote names never count as typos. -ify and -ize need a mid-path transformation with new art and are left for later.
 
 ### How the meaning data is built
 

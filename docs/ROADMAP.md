@@ -99,11 +99,12 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** `dig` burrows, `heal` heals, `angry` makes a herald, and each ability has a test.
 - **Result.** Abilities are quirks, so there is no separate `abilities.ts`; the verb-to-ability map is built into the lexicon. Heralds are a visible aura rather than buffing the next few monsters. Busy chat got harder, so burrow, healer, and herald were trimmed and chat bounty went from 1.3x to 1.5x. Busy chat, 20 runs: smart 16/20 with 9.6 lives, blind 13/20, worst 3/20. Offline unchanged at 20/20.
 
-### M2.7 Typo mutants and affixes: todo
+### M2.7 Typo mutants and affixes: done
 
 - **Depends on.** M2.3.
 - **Goal.** A token within one or two edits of a known word becomes a mutant of that word with one seeded mutation. Affixes change the root: mega-, mini-, un-, -est, re-, -ify.
 - **Done when.** `fier` is a fire mutant, `megasnail` is a bigger, rarer snail, and `unhappy` flips the mood axis.
+- **Result.** `src/genome/affixes.ts`. All three examples work (`unhappy` is a real WordNet word whose antonym link already flips mood). -ify and -ize are not built: they need a mid-path transformation. Unknown tokens cost about 0.33 ms each for the typo search.
 
 ### M2.8 Milestone 2 wrap-up: todo
 
