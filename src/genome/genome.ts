@@ -187,7 +187,7 @@ const MUTATIONS: readonly Quirk[] = ['enraged', 'charge', 'shielded', 'regen', '
 const MAX_QUIRKS = 3;
 
 /** Layer 5: verbs become abilities and adjectives become heralds. Nouns are just bodies. */
-const ABILITY_QUIRK: Record<Ability, Quirk> = {
+export const ABILITY_QUIRK: Record<Ability, Quirk> = {
   sprint: 'charge', hop: 'hop', burrow: 'burrow', stealth: 'stealth',
   heal: 'healer', split: 'splitter', steal: 'thief', explode: 'stunburst',
 };

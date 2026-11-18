@@ -5,6 +5,7 @@
  */
 import { CURATED_EMOTES } from '../genome/curated';
 import { isBlocked, makeGenome, makeWildGenome, readEmoji, type Genome, type Rng } from '../genome';
+import { applyStudio, type StudioConfig } from './studio';
 import type { ChatEmote, ChatEvent, ChatMessage } from '../chat/types';
 import { BALANCE } from './balance';
 
@@ -57,6 +58,13 @@ export class SpawnCollector {
     this.showNames = show;
   }
 
+  private studio: StudioConfig = {};
+
+  /** The streamer's Emote Studio choices: renames, disabled emotes, signature abilities. */
+  setStudio(config: StudioConfig): void {
+    this.studio = config;
+  }
+
   /** Pending species in the order they will be spent: most copies first, then earliest. */
   get pending(): PendingSpecies[] {
     return [...this.species.values()].sort((a, b) => b.contributions.length - a.contributions.length || a.firstAt - b.firstAt);
@@ -90,7 +98,8 @@ export class SpawnCollector {
     for (const token of tokens) {
       const used = this.perUser.get(message.userId) ?? 0;
       if (used >= this.perViewerCap) break;
-      const genome = makeGenome(token.text, { source: 'chat', emote: token.emote, overlay: token.overlay ?? null });
+      const made = makeGenome(token.text, { source: 'chat', emote: token.emote, overlay: token.overlay ?? null });
+      const genome = made && applyStudio(made, this.studio);
       if (!genome) continue;
 
       const userName = this.showNames && !isBlocked(message.userName) ? message.userName : 'chat';
@@ -118,7 +127,8 @@ export class SpawnCollector {
   refreshEmotes(): void {
     for (const pending of this.species.values()) {
       if (!pending.genome.emote && !pending.overlay) continue;
-      const fresh = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote, overlay: pending.overlay ?? null });
+      const made = makeGenome(pending.text, { source: 'chat', emote: pending.genome.emote, overlay: pending.overlay ?? null });
+      const fresh = made && applyStudio(made, this.studio);
       if (fresh && fresh.key === pending.genome.key) pending.genome = fresh;
     }
   }

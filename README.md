@@ -10,8 +10,9 @@ Viewers on Twitch spam words and emotes. Every word becomes a monster shaped by 
 
 1. Pick who sends monsters. **Blended** mixes chat and the Wilds. **Chat only** is for busy chats. **Offline practice** uses only the Wilds.
 2. Enter your Twitch channel name. Reading chat needs no login.
-3. During each build phase, chat types single words or emotes. They appear in the panel on the right.
-4. Build towers that counter what is coming, then start the wave.
+3. Optional: open the **Emote Studio** to see what each of your channel's emotes becomes. Rename them, disable ones you don't want, give them a signature ability, or mark boss candidates. Choices are saved in your browser.
+4. During each build phase, chat types single words or emotes. They appear in the panel on the right.
+5. Build towers that counter what is coming, then start the wave.
 
 | Tower | Damage | Strong against | Weak against |
 |---|---|---|---|

@@ -93,6 +93,7 @@ export class GameScene extends Phaser.Scene {
     setStreamerBlocklist(this.settings.blocklist);
     this.match = new Match({ mode: this.settings.mode });
     this.match.collector.setShowNames(this.settings.showNames);
+    this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
     this.towerViews = new Map();
     this.stunMarks = new Map();

@@ -20,6 +20,11 @@ export class EmoteDirectory {
     return this.channel.size;
   }
 
+  /** The channel's third-party emotes, sorted by name. */
+  channelEmotes(): ChatEmote[] {
+    return [...this.channel.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   lookup(name: string): ChatEmote | undefined {
     return this.channel.get(name) ?? this.global.get(name);
   }

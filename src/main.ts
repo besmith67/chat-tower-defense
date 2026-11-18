@@ -6,6 +6,8 @@ import { TwitchChatSource } from './chat/twitch';
 import { GameScene } from './game/GameScene';
 import { settingsFromUrl, type GameSettings } from './game/settings';
 import { LAYOUT } from './game/theme';
+import { loadStudio } from './sim/studio';
+import { openStudio } from './studio/studioView';
 import type { ChatMode } from './sim/collector';
 
 const setup = document.getElementById('setup') as HTMLFormElement;
@@ -26,12 +28,23 @@ setup.addEventListener('submit', (e) => {
   start({
     mode: (data.get('mode') as ChatMode) ?? 'blended',
     channel: String(data.get('channel') ?? '').trim(),
+    studio: loadStudio(String(data.get('channel') ?? '').trim()),
     showNames: data.get('showNames') === 'on',
     blocklist: String(data.get('blocklist') ?? '')
       .split(',')
       .map((w) => w.trim())
       .filter(Boolean),
   });
+});
+
+document.getElementById('open-studio')!.addEventListener('click', () => {
+  const channel = field<HTMLInputElement>('channel').value.trim();
+  if (!channel) {
+    field<HTMLInputElement>('channel').focus();
+    field<HTMLInputElement>('channel').placeholder = 'Enter your channel first';
+    return;
+  }
+  void openStudio(channel);
 });
 
 if (fromUrl.autostart) setup.requestSubmit();
