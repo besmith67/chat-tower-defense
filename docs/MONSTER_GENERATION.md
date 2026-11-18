@@ -273,6 +273,7 @@ What the rest of chat does in the same window changes the result.
 - **Burst merging.** Copies of the same species within a few seconds merge. Swarm-type species form a horde. Others form a titan whose size grows with the count.
 - **Synonym fusion.** Different words with close meanings fuse. `big`, `huge`, and `giant` together make a colossus that carries all three names.
 - **Antonym clash.** Opposites in the same window, such as `hot` and `cold`, annihilate each other or fuse into an unstable hybrid. Part of chat can sabotage the rest of chat.
+- **Shipped.** Both resolve when the wave starts, using the eight meaning axes as a vector. Words need a meaning of strength 2 or more. Synonyms (cosine 0.92 or more, same element) fuse into one titan named after every word. Opposites (cosine -0.8 or less) cancel copy for copy, and the bigger side keeps what is left. The game announces each fusion and clash on screen.
 - **Rhyme chains.** Rhyming words spawned back to back link into a conga line that shares a shield.
 - **Alliteration.** Words with the same first sound move as a linked pack.
 - **Copypasta.** A long identical message repeated by many viewers becomes a boss candidate.

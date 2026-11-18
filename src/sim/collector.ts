@@ -5,6 +5,7 @@
  */
 import { CURATED_EMOTES } from '../genome/curated';
 import { isBlocked, makeGenome, makeWildGenome, readEmoji, type Genome, type Rng } from '../genome';
+import { resolveCrowd, type CrowdEvent } from './crowd';
 import { applyStudio, type StudioConfig } from './studio';
 import type { ChatEmote, ChatEvent, ChatMessage } from '../chat/types';
 import { BALANCE } from './balance';
@@ -47,6 +48,8 @@ export interface WavePlan {
   budget: number;
   chatThreat: number;
   wildThreat: number;
+  /** Fusions and clashes resolved when the wave started. */
+  crowd: CrowdEvent[];
 }
 
 export class SpawnCollector {
@@ -142,6 +145,7 @@ export class SpawnCollector {
 
   takeWave(budget: number, mode: ChatMode, rng: Rng): WavePlan {
     this.refreshEmotes();
+    const crowd = mode === 'offline' ? [] : resolveCrowd(this.species);
     const orders: SpawnOrder[] = [];
     let remaining = budget;
     let chatThreat = 0;
@@ -175,7 +179,7 @@ export class SpawnCollector {
     }
 
     this.perUser.clear();
-    return { orders: interleave(orders, rng), budget, chatThreat, wildThreat };
+    return { orders: interleave(orders, rng), budget, chatThreat, wildThreat, crowd };
   }
 
   /** Keeps the carry-over backlog bounded by dropping the least popular, oldest species. */

@@ -10,6 +10,8 @@ import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emot
 import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
+import type { WavePlan } from '../sim/collector';
+import type { CrowdEvent } from '../sim/crowd';
 import { Match } from '../sim/match';
 import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
@@ -145,6 +147,10 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < this.speed; i++) this.match.update(dt);
 
     for (const event of this.match.world.drainEvents()) this.onSimEvent(event);
+    if (this.match.lastPlan && this.match.lastPlan !== this.shownPlan) {
+      this.shownPlan = this.match.lastPlan;
+      this.showCrowd(this.match.lastPlan.crowd);
+    }
     this.syncMonsters();
     this.syncStuns();
     this.drawGhost();
@@ -893,6 +899,25 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => dot.destroy(),
       });
     }
+  }
+
+  private shownPlan: WavePlan | null = null;
+
+  /** Announces fusions and clashes at the top of the map as the wave starts. */
+  private showCrowd(events: CrowdEvent[]): void {
+    events.slice(0, 4).forEach((e, i) => {
+      const message = e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}` : `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`;
+      const color = e.type === 'fusion' ? '#ffd166' : '#ff8fa3';
+      this.time.delayedCall(i * 600, () => {
+        const t = this.add
+          .text(LAYOUT.panelX / 2, LAYOUT.topBar + 40 + i * 30, message, text({ fontSize: '20px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 5 }))
+          .setOrigin(0.5)
+          .setDepth(98)
+          .setScale(0.6);
+        this.tweens.add({ targets: t, scale: 1, duration: 180, ease: 'Back.Out' });
+        this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 500, onComplete: () => t.destroy() });
+      });
+    });
   }
 
   private floatText(x: number, y: number, message: string, color: string, size = 14): void {

@@ -106,6 +106,8 @@ export interface Genome {
   emoji: string | null;
   /** A 7TV zero-width emote layered on top of the face. */
   overlay: EmoteRef | null;
+  /** Set when synonyms in the same window fused into this monster: every word that went in. */
+  fusion?: string[];
   /** Null for invented words, Wilds, numbers, and curated archetypes. */
   meaning: Meaning | null;
   element: Element | null;

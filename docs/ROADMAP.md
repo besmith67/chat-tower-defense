@@ -134,7 +134,7 @@ Branch: `milestone-4-crowd`.
 | ID | Package | Depends on | Status |
 |---|---|---|---|
 | M4.1 | Boss waves every fifth wave. Chat votes with `!vote 1/2/3` among three candidates built from the run's most popular species. | M2.3 | done: `src/sim/boss.ts`. Candidates are Emote Studio boss picks, then the most-sent species, then Wilds. Bare `1`, `2`, `3` also vote and never spawn. The boss takes 30% of the wave budget as one slow giant (titan discount applies) and walks in last. Healing now divides by size squared, because percent regen made a love-boss unkillable. Busy chat: smart 18/20, blind 12/20, worst 4/20. |
-| M4.2 | Synonym fusion and antonym clash in the spawn window, using lexicon axes. | M2.3 | todo |
+| M4.2 | Synonym fusion and antonym clash in the spawn window, using lexicon axes. | M2.3 | done: `src/sim/crowd.ts`, resolved when a wave starts and announced on screen. Fusion: meaning vectors with cosine 0.92 or more, a different dictionary word, and a matching element merge into one titan carrying every name (big+huge+giant). Clash: cosine -0.8 or less cancels copy for copy (hot vs cold). Fusion is not an elite: an elite bonus on top of the merged copies leaked from wave 1. Busy chat: smart 18/20, blind 15/20, worst 7/20. |
 | M4.3 | Rhyme chains and alliteration packs. | M2.3 | todo |
 | M4.4 | Tower sabotage: words near a tower's weakness (`rust`, `ground`, `water`) spawn saboteurs that go after that tower type. | M2.4 | todo |
 | M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | todo |
