@@ -123,7 +123,7 @@ Branch: `milestone-3-emotes`.
 | M3.1 | Emote name splitting: `pokiHype` becomes prefix `poki` plus suffix `Hype`, and the suffix runs through the lexicon. Curated suffix table (Hype, Love, Rage, Sad, Pog, W, L, Hi, Sleep, Clap, GG). | M2.3 | done: `src/genome/emoteName.ts`. A noun prefix (cat, pepe) lends its family when the suffix is not a noun. Real words like Pizza are never split. |
 | M3.2 | Emote image analysis in the browser: palette to element, transparency mask to silhouette, edge roughness to form. Cache results per emote. Decide whether BTTV images get a proxy or stay as generated faces. | M2.4 | todo |
 | M3.3 | 7TV zero-width emotes as modifier genes on the previous monster (hat, rain, flames). | M3.2 | todo |
-| M3.4 | Emoji: map to their Unicode names and run those through the word pipeline, so 🔥 reads as fire. | M2.3 | todo |
+| M3.4 | Emoji: map to their Unicode names and run those through the word pipeline, so 🔥 reads as fire. | M2.3 | done: 1,914 emoji mapped at build time from emojilib keywords, with chat overrides (😂 laugh, 💀 skull). The emoji is drawn as the face, a run like 🔥🔥🔥 is a swarm, and emoji count inside longer messages like emotes do. Before this, emoji spawned nothing. |
 | M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | todo |
 | M3.6 | Twitch OAuth (implicit flow, Client ID from U5) and sub-tier rarity for emotes. | U5 | blocked: needs U5 |
 

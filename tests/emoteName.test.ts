@@ -40,3 +40,29 @@ describe('emote names', () => {
     expect(makeGenome('pokiHype', { emote })!.key).toBe(makeGenome('pokiHype', { emote })!.key);
   });
 });
+
+describe('emoji', () => {
+  it('reads an emoji as its word but keeps its own species', () => {
+    const fire = makeGenome('🔥')!;
+    expect(fire.emoji).toBe('🔥');
+    expect(fire.token).toBe('🔥');
+    expect(fire.element).toBe('fire');
+    expect(fire.meaning?.lemma).toBe('fire');
+    expect(fire.key).not.toBe(makeGenome('fire')!.key);
+  });
+
+  it('uses chat meanings for chat emoji', () => {
+    expect(makeGenome('😂')!.meaning?.lemma).toBe('laugh');
+    expect(makeGenome('💀')!.meaning?.lemma).toBe('skull');
+    expect(makeGenome('🐌')!.meaning?.lemma).toBe('snail');
+  });
+
+  it('turns a run of the same emoji into a swarm', () => {
+    expect(makeGenome('🔥🔥🔥🔥')!.swarm).toBe(4);
+    expect(makeGenome('🔥')!.swarm).toBe(1);
+  });
+
+  it('ignores mixed emoji runs and unknown symbols', () => {
+    expect(makeGenome('🔥🐌')).toBeNull();
+  });
+});

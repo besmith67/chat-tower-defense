@@ -109,8 +109,8 @@ export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterText
   }
 
   if (family) drawPlanOnBody(g, genome, cx, cy, R, palette);
-  if (!genome.emote) drawFace(g, genome, cx, cy, R);
-  if (family === 'meme' && !genome.emote) drawShades(g, genome, cx, cy, R);
+  if (!genome.emote && !genome.emoji) drawFace(g, genome, cx, cy, R);
+  if (family === 'meme' && !genome.emote && !genome.emoji) drawShades(g, genome, cx, cy, R);
 
   g.generateTexture(key, w, h);
   g.destroy();

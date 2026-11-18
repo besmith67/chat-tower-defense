@@ -102,6 +102,8 @@ export interface Genome {
   /** Set for curated emotes and meme numbers. Shown in the inspect panel. */
   archetype: string | null;
   emote: EmoteRef | null;
+  /** Set when chat sent an emoji. It is drawn as the face. */
+  emoji: string | null;
   /** Null for invented words, Wilds, numbers, and curated archetypes. */
   meaning: Meaning | null;
   element: Element | null;

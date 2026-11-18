@@ -263,7 +263,7 @@ A setup screen for the streamer.
 3. The streamer reviews them. They can rename a species, pick its signature ability from the catalog, add lore, disable it, or mark it as a boss candidate.
 4. The channel's signature emote can become the channel's final boss.
 
-Emoji follow the same path as words. Their official Unicode names feed the word pipeline, so 🔥 reads as `fire`.
+Emoji follow the same path as words, so 🔥 reads as `fire`. Shipped: the lexicon build maps each emoji to one word from its emojilib keywords, preferring its one-word name, then a seeded word, with hand overrides for chat meanings (😂 is laugh, 💀 is skull, 🧢 is nocap). An emoji keeps its own species and is drawn as the monster's face. A run of the same emoji is a swarm of up to six.
 
 ## Layer 7: Crowd
 

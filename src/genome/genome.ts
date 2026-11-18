@@ -8,6 +8,7 @@ import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
 import { flipStrongest, parseWord, type ParsedWord } from './affixes';
 import { EMOTE_SUFFIXES, splitEmoteName } from './emoteName';
+import { readEmoji } from './emoji';
 import { lookupWord } from './lexicon';
 import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
@@ -26,11 +27,14 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   const emote = options.emote ?? null;
   if (isBlocked(token)) return null;
 
-  const norm = normalizeToken(token);
+  // Emoji become their word ("🔥" reads as fire) but keep their own species and face.
+  const emoji = source === 'chat' ? readEmoji(token) : null;
+  const norm = normalizeToken(emoji ? emoji.word : token);
   if (!norm) return null;
+  if (emoji) norm.raw = emoji.glyph;
 
   const archetype = norm.number !== null ? CURATED_NUMBERS[norm.number] : CURATED_EMOTES[norm.raw.replace(/[!?.]+$/, '')];
-  const key = speciesKey(source, norm, emote);
+  const key = speciesKey(source, norm, emote) + (emoji ? `|emoji:${emoji.glyph}` : '');
   const seed = fnv1a(key);
   const rng = mulberry32(seed);
 
@@ -70,6 +74,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   }
 
   let swarm = form.swarm;
+  if (emoji && emoji.count >= 3) swarm = Math.min(6, emoji.count);
   if (norm.number !== null && !archetype) {
     // Plain numbers become a squad of numerals, one per digit.
     swarm = clamp(norm.number.length, 2, 6);
@@ -100,6 +105,7 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
     swarm,
     archetype: archetype?.title ?? null,
     emote,
+    emoji: emoji?.glyph ?? null,
     meaning,
     element,
     family: word && meaning?.pos === 'n' ? word.family : named?.prefixFamily ?? null,

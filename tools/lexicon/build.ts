@@ -23,10 +23,12 @@ import {
 const require = createRequire(import.meta.url);
 const WN: string = require('wordnet-db').path;
 const SUBTLEX: { word: string; count: number }[] = require('subtlex-word-frequencies/index.json');
+const EMOJILIB: Record<string, string[]> = require('emojilib');
 
 const MIN_COUNT = 2;
 const SUBTLEX_TOTAL = 51e6;
 const OUT = 'src/genome/data/lexicon.json';
+const EMOJI_OUT = 'src/genome/data/emoji.json';
 
 // ---------- WordNet ----------
 
@@ -328,3 +330,31 @@ console.log(`  seeded ${stats.seeded}, inherited ${stats.inherited}, gloss only 
 console.log('  families', stats.families);
 console.log('  elements', stats.elements);
 console.log('  abilities', stats.abilities);
+
+// ---------- Emoji ----------
+// Each emoji maps to one lexicon word, picked from its emojilib keywords: a seeded word first,
+// then any known word. A few emoji mean something specific in chat and are set by hand.
+
+const EMOJI_OVERRIDES: Record<string, string> = {
+  '😂': 'laugh', '🤣': 'laugh', '💀': 'skull', '😭': 'cry', '🙏': 'holy', '❤️': 'love', '❤': 'love',
+  '👀': 'eye', '🗿': 'moai', '🤡': 'clown', '😈': 'demon', '👻': 'ghost', '🔥': 'fire', '💯': 'power',
+  '🐐': 'goat', '🧢': 'nocap', '😡': 'angry', '🤬': 'rage', '😴': 'sleep', '🥶': 'frozen', '🥵': 'hot',
+  '🤮': 'toxic', '🤑': 'gold', '🫡': 'knight', '🍕': 'pizza', '🐌': 'snail', '🚀': 'rocket', '💩': 'poop',
+};
+const SKIP = new Set(['face', 'with', 'of', 'the', 'and', 'person', 'man', 'woman', 'symbol', 'sign', 'button', 'mark', 'emoji', 'smiley', 'smile', 'open', 'eyes', 'hand']);
+
+const emoji: Record<string, string> = {};
+for (const [glyph, keywords] of Object.entries(EMOJILIB)) {
+  const override = EMOJI_OVERRIDES[glyph];
+  if (override && words[override]) {
+    emoji[glyph] = override;
+    continue;
+  }
+  const candidates = keywords.flatMap((k) => k.toLowerCase().split(/[_\s-]+/)).filter((w) => /^[a-z]+$/.test(w) && !SKIP.has(w));
+  // The first keyword is the emoji's name. A one-word name ("hamburger") wins; otherwise prefer seeded words.
+  const name = keywords[0]?.toLowerCase();
+  const pick = (name && words[name] ? name : null) ?? candidates.find((w) => seeds.has(w)) ?? candidates.find((w) => words[w]);
+  if (pick) emoji[glyph] = pick;
+}
+writeFileSync(EMOJI_OUT, JSON.stringify(emoji) + '\n');
+console.log(`Wrote ${EMOJI_OUT}: ${Object.keys(emoji).length} emoji`);

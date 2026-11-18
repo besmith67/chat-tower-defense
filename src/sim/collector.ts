@@ -4,7 +4,7 @@
  * wave's threat budget. In blended and offline modes the Wilds fill the unspent budget.
  */
 import { CURATED_EMOTES } from '../genome/curated';
-import { isBlocked, makeGenome, makeWildGenome, type Genome, type Rng } from '../genome';
+import { isBlocked, makeGenome, makeWildGenome, readEmoji, type Genome, type Rng } from '../genome';
 import type { ChatEmote, ChatEvent, ChatMessage } from '../chat/types';
 import { BALANCE } from './balance';
 
@@ -182,8 +182,9 @@ export function extractTokens(message: ChatMessage): Token[] {
     const word = unique[0];
     return [{ text: word, emote: emoteByName.get(word) ?? null }];
   }
+  // In longer messages only emotes, curated names, and emoji count, so sentences do not spawn every word.
   return unique
-    .filter((w) => emoteByName.has(w) || CURATED_EMOTES[w])
+    .filter((w) => emoteByName.has(w) || CURATED_EMOTES[w] || readEmoji(w))
     .map((w) => ({ text: w, emote: emoteByName.get(w) ?? null }));
 }
 
