@@ -18,6 +18,7 @@ import { Match } from '../sim/match';
 import { sabotageTarget } from '../sim/sabotage';
 import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
+import { AudioBus } from './audio';
 import { monsterTexture, towerTextures } from './monsterArt';
 import type { GameSettings } from './settings';
 import { COLORS, FONT, LAYOUT } from './theme';
@@ -139,7 +140,9 @@ export class GameScene extends Phaser.Scene {
     this.unsubscribe = this.hub.on((e) => this.onChat(e));
     this.registry.set('match', this.match);
 
+    this.audio = new AudioBus();
     this.events.once('shutdown', () => {
+      this.audio.stop();
       this.unsubscribe?.();
       if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
     });
@@ -154,7 +157,10 @@ export class GameScene extends Phaser.Scene {
       this.shownPlan = this.match.lastPlan;
       this.showCrowd(this.match.lastPlan.crowd);
       this.match.bestiary.save(this.settings.channel);
+      this.audio.play('wave');
+      if (this.match.lastPlan.crowd.length) this.time.delayedCall(300, () => this.audio.play('crowd'));
     }
+    this.audio.setIntensity(this.match.phase === 'wave');
     this.syncMonsters();
     this.syncStuns();
     this.drawGhost();
@@ -409,7 +415,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · M mute · ` chat', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -619,6 +625,7 @@ export class GameScene extends Phaser.Scene {
     else if (key === 's' && this.selectedTower) this.sellSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
     else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
+    else if (key === 'm') this.flash(this.audio.toggleMute() ? 'Sound off (M)' : 'Sound on (M)');
     else if (key === '`') {
       e.preventDefault();
       window.dispatchEvent(new Event('toggle-test-chat'));
@@ -678,7 +685,10 @@ export class GameScene extends Phaser.Scene {
       if (this.match.world.gold < def.cost) return this.flash('Not enough gold');
       if (!this.match.world.canPlace(col, row)) return this.flash("Can't build there");
       const tower = this.match.placeTower(this.selectedBuild, col, row);
-      if (tower) this.addTowerView(tower);
+      if (tower) {
+        this.addTowerView(tower);
+        this.audio.play('build');
+      }
       return;
     }
     const existing = this.match.world.towerAt(col, row);
@@ -686,7 +696,6 @@ export class GameScene extends Phaser.Scene {
     if (!existing && this.hoveredMonster) this.spotlight = this.hoveredMonster;
   }
 
-  /** Places a tower exactly like a click would. Used by scripted playtests. */
   /** An emoji drawn as text, centered, for monster faces and panel icons. */
   private emojiFace(x: number, y: number, glyph: string, size: number): Phaser.GameObjects.Text {
     return this.add.text(x, y, glyph, { fontSize: `${Math.round(size)}px`, fontFamily: 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif' }).setOrigin(0.5);
@@ -712,6 +721,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Places a tower exactly like a click would. Used by scripted playtests. */
   debugPlace(id: TowerId, col: number, row: number): boolean {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
@@ -722,6 +732,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.selectedTower;
     if (!t) return;
     const refund = this.match.sellTower(t);
+    this.audio.play('sell');
     this.towerViews.get(t.id)?.destroy();
     this.towerViews.delete(t.id);
     this.floatText(sx(t.x), sy(t.y) - 20, `+◆${refund}`, COLORS.gold);
@@ -768,6 +779,7 @@ export class GameScene extends Phaser.Scene {
       case 'spawn':
         this.createMonsterView(e.monster);
         if (e.monster.order.boss) {
+          this.audio.play('boss');
           this.cameras.main.shake(300, 0.006);
           this.floatText(LAYOUT.panelX / 2, LAYOUT.topBar + 60, `👑 BOSS: ${e.monster.genome.token}`, '#ffd166', 26);
         }
@@ -775,16 +787,19 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'shot':
         this.shotFx(e.tower, e.target);
+        this.audio.play(e.tower.def.kind);
         break;
       case 'chain':
         this.boltFx(sx(e.from.x), sy(e.from.y), sx(e.to.x), sy(e.to.y));
         break;
       case 'pulse': {
+        this.audio.play('cold');
         const ring = this.add.circle(sx(e.tower.x), sy(e.tower.y), 10).setStrokeStyle(3, 0x90e0ef, 0.9).setDepth(40);
         this.tweens.add({ targets: ring, radius: e.tower.def.range, alpha: 0, duration: 380, onComplete: () => ring.destroy() });
         break;
       }
       case 'hit':
+        if (e.effect === 'strong') this.audio.play('strong');
         if (e.effect === 'strong') this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius, `${Math.round(e.amount)}!`, COLORS.strong);
         else if (e.effect === 'weak') this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius, `${Math.round(e.amount)}`, COLORS.weak, 11);
         break;
@@ -820,6 +835,7 @@ export class GameScene extends Phaser.Scene {
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
         break;
       case 'jam':
+        this.audio.play('jam');
         for (const t of e.towers) {
           this.boltFx(sx(e.monster.x), sy(e.monster.y), sx(t.x), sy(t.y));
           this.floatText(sx(t.x), sy(t.y) - 26, 'JAMMED', '#ff8fa3', 13);
@@ -841,11 +857,13 @@ export class GameScene extends Phaser.Scene {
         this.floatText(sx(e.tower.x), sy(e.tower.y) - 26, 'STUNNED', '#ffd166', 12);
         break;
       case 'death':
+        this.audio.play('death');
         this.deathFx(e.monster);
         this.removeMonsterView(e.monster.id);
         if (e.monster.bounty > 1) this.floatText(sx(e.monster.x), sy(e.monster.y) - 8, `+${e.monster.bounty}`, COLORS.gold, 12);
         break;
       case 'leak': {
+        this.audio.play('leak');
         this.removeMonsterView(e.monster.id);
         this.cameras.main.shake(140, 0.004);
         const base = this.match.world.map.base;
@@ -916,6 +934,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private shownPlan: WavePlan | null = null;
+  private audio!: AudioBus;
 
   /** Announces fusions and clashes at the top of the map as the wave starts. */
   private showCrowd(events: CrowdEvent[]): void {

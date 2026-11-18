@@ -140,11 +140,13 @@ Branch: `milestone-4-crowd`.
 | M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | done: `src/sim/bestiary.ts` and `src/studio/bestiaryView.ts` (B key in game, or the setup screen). New species and evolutions are announced at wave start. A species that leaks 3 times in a run comes back as its Prime form: elite, 25% more power, a bit bigger. The Abstract family now shows as Idea, so it never reads like the Spirit element. |
 | M4.6 | Channel point redemptions through EventSub WebSocket: rewards that help or hurt the streamer. | M3.6 | blocked: needs U5 |
 
-## Milestone 5: Polish and reach
+## Milestone 5: Polish and reach (in progress)
+
+Branch: `milestone-5-polish`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M5.1 | Sound: procedural Web Audio effects for shots, hits, deaths, leaks, and wave start. A simple music loop. A mute toggle. | none | todo |
+| M5.1 | Sound: procedural Web Audio effects for shots, hits, deaths, leaks, and wave start. A simple music loop. A mute toggle. | none | done: `src/game/audio.ts`. Every sound is synthesized, so no audio files or licenses. Rapid sounds are throttled. The music loop gets busier during waves. M mutes and is remembered. Needs a human ear: U4 should include whether the sound is pleasant. |
 | M5.2 | Tower upgrades: two levels per tower. | M2.4 | todo |
 | M5.3 | More maps and a map picker. | none | todo |
 | M5.4 | YouTube and Kick chat adapters. Research first: both need API keys or unofficial endpoints. | none | todo |

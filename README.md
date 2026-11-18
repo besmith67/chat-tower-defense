@@ -43,6 +43,7 @@ Every fifth wave is a boss wave. Chat votes with `!vote 1`, `!vote 2`, or `!vote
 | Space | Start the wave early |
 | F | Cycle game speed |
 | B | Open the bestiary |
+| M | Mute or unmute |
 | \` | Open the test chat box to type as if you were chat |
 
 ### URL options
