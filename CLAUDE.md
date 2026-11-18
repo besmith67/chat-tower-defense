@@ -15,8 +15,8 @@ npm run dev         # local game at http://localhost:5173
 npm test            # vitest
 npm run typecheck
 npm run build       # typecheck + production build to dist/
-npm run balance     # headless bot plays full runs; prints win rates
-npm run playtest    # puppeteer screenshots; needs `npx vite preview --port 4173` running
+npm run balance     # headless bot plays full runs; prints win rates. Args: [runs] [smart|needles|lazy] [offline|chat]
+npm run playtest    # puppeteer screenshots to ./playtest-shots; needs `npx vite preview --port 4173`. WORDS="a b c" sends your own words
 npm run lexicon     # rebuild src/genome/data/lexicon.json from WordNet + data/lexicon/seeds.tsv
 ```
 

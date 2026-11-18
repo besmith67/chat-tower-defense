@@ -28,6 +28,8 @@ export interface Monster {
   nextBlinkAt: number;
   copeReadyAt: number;
   shieldUp: boolean;
+  /** Set once an undying monster has used its second life. */
+  revived: boolean;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -57,6 +59,7 @@ export type SimEvent =
   | { type: 'reflect'; monster: Monster }
   | { type: 'shield'; monster: Monster }
   | { type: 'heal'; monster: Monster }
+  | { type: 'revive'; monster: Monster }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
   | { type: 'death'; monster: Monster; killer: Tower | null }
@@ -180,7 +183,7 @@ export class World {
       hp: maxHp,
       maxHp,
       armor: Math.min(BALANCE.maxArmor, w.armor * 0.8 + cyber),
-      speed: BALANCE.baseSpeed + BALANCE.speedRange * w.speed,
+      speed: (BALANCE.baseSpeed + BALANCE.speedRange * w.speed) / Math.pow(order.scale, BALANCE.titanSlowExponent),
       radius: genome.look.radius * order.scale,
       age: 0,
       slowUntil: 0,
@@ -189,7 +192,8 @@ export class World {
       nextBlinkAt: this.time + 3 + (genome.look.phase % 1.5),
       copeReadyAt: 0,
       shieldUp: genome.quirks.includes('shielded'),
-      bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat)),
+      revived: false,
+      bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
     };
@@ -203,6 +207,7 @@ export class World {
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.age += dt;
+      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
       let speed = m.speed * this.speedFactor(m);
       if (hypeSources.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) speed *= 1.25;
       m.dist += speed * dt;
@@ -277,7 +282,8 @@ export class World {
   }
 
   private inRange(tower: Tower, m: Monster): boolean {
-    const range = tower.def.range * (m.genome.quirks.includes('drowsy') ? 0.65 : 1);
+    const q = m.genome.quirks;
+    const range = tower.def.range * (q.includes('drowsy') ? 0.65 : 1) * (q.includes('stealth') ? BALANCE.stealthRange : 1);
     return Math.hypot(m.x - tower.x, m.y - tower.y) <= range + m.radius * 0.5;
   }
 
@@ -323,6 +329,12 @@ export class World {
       this.events.push({ type: 'heal', monster: m });
     }
 
+    if (m.hp <= 0 && q.includes('undying') && !m.revived) {
+      m.revived = true;
+      m.hp = m.maxHp * 0.35;
+      this.events.push({ type: 'revive', monster: m });
+      return;
+    }
     if (m.hp <= 0) this.kill(m, tower);
   }
 

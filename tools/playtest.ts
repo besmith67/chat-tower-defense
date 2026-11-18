@@ -32,6 +32,8 @@ await sleep(4000);
 await page.screenshot({ path: `${out}/01-start.png` });
 
 // Build a defense and have "chat" send a spread of words that exercise different genes.
+// Set WORDS="ghost dragon tree" to send your own list instead.
+if (process.env.WORDS) await page.evaluate((w) => ((window as any).__words = w.split(' ')), process.env.WORDS);
 await page.evaluate(() => {
   const d = (window as any).__ctd;
   const scene = d.scene();
@@ -41,13 +43,14 @@ await page.evaluate(() => {
     ['needle', 16, 7], ['needle', 14, 10], ['hammer', 19, 10], ['frost', 21, 8], ['needle', 19, 5],
   ];
   for (const [id, c, r] of towers) scene.debugPlace(id, c, r);
-  const words = [
-    'snail', 'KEKW', 'NOOOOO', 'racecar', 'jazz', 'hahahaha', 'bloom', 'kitkat', 'Copium', 'sNaIl',
-    'h4x0r', 'zzzzz', 'pizza', 'what?', 'sleep...', 'go!!!', 'EZ', 'LUL', 'PogChamp', '420',
-    'Sadge', 'catJAM', 'GAMBA', 'OMEGALUL',
+  const custom = (window as any).__words as string[] | undefined;
+  const words = custom ?? [
+    'snail', 'KEKW', 'NOOOOO', 'racecar', 'rocket', 'hahahaha', 'ghost', 'dragon', 'Copium', 'sNaIl',
+    'h4x0r', 'zzzzz', 'pizza', 'what?', 'sleep...', 'go!!!', 'EZ', 'LUL', 'tornado', 'wolves',
+    'zombie', 'tree', 'quixotic', 'sus', 'lava', 'Sadge', 'catJAM', 'OMEGALUL',
   ];
   words.forEach((w, i) => d.say(w, `viewer${i % 14}`));
-  for (let i = 0; i < 6; i++) d.say('KEKW', `spammer${i}`);
+  if (!custom) for (let i = 0; i < 6; i++) d.say('KEKW', `spammer${i}`);
 });
 await sleep(900);
 await page.screenshot({ path: `${out}/02-chat-queued.png` });
@@ -59,7 +62,10 @@ await page.screenshot({ path: `${out}/03-wave.png` });
 // Hover a monster still alive to exercise the inspect panel.
 const hover = await page.evaluate(() => {
   const m = (window as any).__ctd.scene().registry.get('match');
-  const target = m.world.monsters.find((x: any) => x.genome.source === 'chat') ?? m.world.monsters[0];
+  const target =
+    m.world.monsters.find((x: any) => x.genome.meaning && x.genome.element) ??
+    m.world.monsters.find((x: any) => x.genome.source === 'chat') ??
+    m.world.monsters[0];
   return target ? { x: target.x, y: target.y + 48 } : null;
 });
 if (hover) {

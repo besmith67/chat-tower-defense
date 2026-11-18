@@ -82,3 +82,36 @@ describe('World', () => {
     expect(types.indexOf('shield')).toBeLessThan(types.indexOf('hit'));
   });
 });
+
+describe('meaning quirks in the sim', () => {
+  it('regenerates living monsters', () => {
+    const world = new World(0, 20);
+    world.queueWave([order('tree')], 1);
+    run(world, 1);
+    const m = world.monsters[0];
+    expect(m.genome.quirks).toContain('regen');
+    m.hp = m.maxHp / 2;
+    run(world, 2);
+    expect(m.hp).toBeGreaterThan(m.maxHp / 2);
+  });
+
+  it('brings undying monsters back once', () => {
+    const world = new World(1000, 20);
+    world.placeTower('hammer', 5, 3);
+    world.queueWave([order('zombie', 0.2)], 1);
+    const events: string[] = [];
+    for (let t = 0; t < 120 && !world.waveDone; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) events.push(e.type);
+    }
+    expect(events).toContain('revive');
+    expect(events.filter((e) => e === 'revive').length).toBe(1);
+  });
+
+  it('makes titans slower than a single copy', () => {
+    const world = new World(0, 20);
+    const single = world.spawn(order('snail'), 'chat', 0);
+    const titan = world.spawn({ ...order('snail'), scale: 2 }, 'chat', 0);
+    expect(titan.speed).toBeLessThan(single.speed);
+  });
+});

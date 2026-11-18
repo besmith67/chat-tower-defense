@@ -18,7 +18,7 @@ Or just "do the next package", which means the first package below whose status 
 ### Definition of done
 
 - `npm test`, `npm run typecheck`, and `npm run build` all pass.
-- `npm run balance` still shows the smart bot winning most runs and the lazy bot losing. Note the numbers in the package result.
+- `npm run balance -- 20 smart` and `npm run balance -- 20 smart chat` still show the smart bot winning most runs, and the needles and lazy bots losing. Note the numbers in the package result.
 - For anything visible: `npm run build && npx vite preview --port 4173` then `npm run playtest`, and look at the screenshots.
 - Design docs match what shipped.
 
@@ -67,13 +67,14 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** The worked examples in MONSTER_GENERATION.md read correctly (`snail` slow and hard, `rocket` fast and hot, `ghost` quiet and dead, `avalanche` fast, huge, cold, chaotic).
 - **Result.** 509 seeds. 8,142 more words inherit through WordNet and 2,746 get gloss nudges. Seeded slang is never rare. Common irregular forms (wolves, mice, ran) are handled. Room to grow: more slang, emote suffixes for M3.1, and more verbs once M2.6 picks its ability list.
 
-### M2.3 Layer 3: meaning drives stats and element: todo
+### M2.3 Layer 3: meaning drives stats and element: done
 
 - **Depends on.** M2.1. Better after M2.2.
 - **Goal.** Axis scores bend the stat weights (speed, mass to health and size, hardness to armor). The genome gains `element` and `meaning`. Rare words become elites.
 - **Rules.** Meaning outranks form. Form still decides the tower counter (spiky vs round). The total stat budget never changes.
 - **Visible.** Element tints the body hue. The inspect panel explains the meaning in plain words ("means slow, hard").
 - **Done when.** Tests show `snail` slower than `rocket` regardless of sound, and the balance bot still holds.
+- **Result.** Shipped with three new quirks (regen, undying, stealth). The balance bot gained a simulated busy chat (`npm run balance -- 20 smart chat`). It showed that busy chat was already unwinnable in milestone 1 because spam titans leaked. Fixed: titans slow down with size, stealth is 80 percent range, and chat monsters pay 1.3x bounty. Smart bot: offline 20/20 wins with 19 lives left; busy chat 15/20 with about 10 lives left. Needles-only loses both. The bundle grew to 558 KB gzipped because of the lexicon; lazy-loading it is an option if load time matters.
 
 ### M2.4 Elements and two elemental towers: todo
 

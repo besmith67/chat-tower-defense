@@ -6,7 +6,7 @@ import Phaser from 'phaser';
 import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
 import { setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
-import { QUIRK_INFO, formText, weaknessText } from '../genome/describe';
+import { QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import { Match } from '../sim/match';
@@ -468,7 +468,11 @@ export class GameScene extends Phaser.Scene {
     add(this.add.text(x + 70, 456, g.token, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
     const origin = g.source === 'wilds' ? '⟡ Wild creature, not from chat' : `sent by ${m.order.sender ?? 'chat'}${m.order.copies > 1 ? ` · ×${m.order.copies} merged` : ''}`;
     add(this.add.text(x + 70, 482, g.archetype ? `${g.archetype} · ${origin}` : origin, text({ fontSize: '12px', color: COLORS.muted, wordWrap: { width: 180 } })).setDepth(91));
-    add(this.add.text(x, 522, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91));
+    // Lines stack by measured height, since the meaning line can wrap.
+    let y = 512;
+    const meaning = meaningText(g);
+    if (meaning) y += add(this.add.text(x, y, meaning, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91)).height + 2;
+    y += add(this.add.text(x, y, formText(g), text({ fontSize: '12px', color: COLORS.muted })).setDepth(91)).height + 6;
 
     const bars: [string, number, number][] = [
       ['HP', g.weights.hp, 0xff6b8b],
@@ -476,13 +480,13 @@ export class GameScene extends Phaser.Scene {
       ['ARM', g.weights.armor, 0xffd166],
     ];
     bars.forEach(([label, value, color], i) => {
-      const by = 544 + i * 16;
+      const by = y + i * 14;
       add(this.add.text(x, by, label, text({ fontSize: '11px', color: COLORS.muted })).setDepth(91));
       add(this.add.rectangle(x + 34, by + 3, 200, 8, 0x2b2550).setOrigin(0).setDepth(91));
       add(this.add.rectangle(x + 34, by + 3, Math.max(4, 200 * Math.min(1, value * 1.8)), 8, color).setOrigin(0).setDepth(92));
     });
+    y += bars.length * 14 + 6;
 
-    let y = 596;
     for (const q of g.quirks.slice(0, 3)) {
       const info = QUIRK_INFO[q];
       const t = add(this.add.text(x, y, `${info.label}: ${info.detail}`, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91));
@@ -679,6 +683,9 @@ export class GameScene extends Phaser.Scene {
       case 'heal':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, '+cope', '#7cff9b', 12);
         break;
+      case 'revive':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'RISES AGAIN', '#c9b6ff', 12);
+        break;
       case 'blink':
         this.floatText(sx(e.monster.x), sy(e.monster.y), 'blink', '#d9c6ff', 11);
         break;
@@ -835,7 +842,7 @@ export class GameScene extends Phaser.Scene {
       if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
       else if (m.genome.quirks.includes('enraged') && m.hp < m.maxHp * 0.6) v.sprite.setTint(0xff9a9a);
       else v.sprite.clearTint();
-      v.root.setAlpha(m.genome.quirks.includes('drowsy') ? 0.7 : 1);
+      v.root.setAlpha(m.genome.quirks.includes('stealth') ? 0.45 : m.genome.quirks.includes('drowsy') ? 0.7 : 1);
 
       if (m.hp < m.maxHp) {
         const frac = Math.max(0, m.hp / m.maxHp);

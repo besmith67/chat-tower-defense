@@ -91,7 +91,23 @@ A word lands wherever its meaning puts it. `snail` scores slow, small, and soft-
 
 ### Element
 
-The word's nearest element among fire, ice, storm, poison, earth, metal, shadow, light, arcane, and nature. Below a similarity threshold the monster is neutral.
+One of six elements, or neutral: fire, frost, storm, venom, stone, and spirit. Ten elements were too many to read at a glance on stream. Element sets the body color: fire is red, frost is cyan, storm is yellow, venom is green, stone is a dull brown, and spirit is purple.
+
+### How meaning changes the monster (shipped)
+
+- **Stats.** Speed, mass, and hardness bend the speed, health, and armor weights. A full-strength axis moves a stat more than the sharpest spelling, so meaning outranks sound. The total budget never changes.
+- **Size.** Mass scales the body by up to 27 percent either way.
+- **Shape stays with sound.** Meaning never changes the spiky or round class, so the Needle and Hammer counter still reads from shape alone.
+- **Quirks.** The two strongest axes can each add one behavior, up to three quirks in total. Quirks chat typed on purpose, from casing and punctuation, come first.
+
+| Axis value | Quirk |
+|---|---|
+| Life +2 or more | Regen: heals over time |
+| Life -2 or less | Undying: gets back up once at 35 percent health |
+| Presence -2 or less | Stealth: towers see it at 80 percent range, drawn translucent |
+| Presence +3 | Mocking: towers must shoot it first |
+| Mood +3 | Enraged |
+| Order +3 | Confused |
 
 ### Other meaning signals
 
@@ -110,15 +126,18 @@ The word's nearest element among fire, ice, storm, poison, earth, metal, shadow,
 
 ### How the meaning data is built
 
-This runs offline at build time, not during play.
+This runs offline at build time (`npm run lexicon`), not during play. See `data/lexicon/README.md`.
 
-1. Start from a vocabulary: common English words, Twitch slang, and the most-used global and third-party emote names.
-2. Compute word embeddings with an open embedding model and project each word onto the axes above.
-3. Tag each word with its category, part of speech, and frequency.
-4. Run an LLM review pass to fix slang and meme meanings, then curate by hand.
-5. Ship the result as a small versioned data file. The game needs no model at runtime and works offline.
+1. The vocabulary is every single-word WordNet lemma that appears in SUBTLEX-US subtitle counts at least twice, plus hand-written seeds for slang WordNet lacks. About 34,000 words.
+2. WordNet gives each word its parts of speech, ranked by how often each sense is used, and its family from the lexicographer file of its main noun sense.
+3. Hand-scored seeds in `data/lexicon/seeds.tsv` give axis scores and elements for about 500 words chat is likely to type.
+4. Seed meanings spread through WordNet: synonyms copy a seed, and hypernym, similar-to, derivation, and antonym links pass on a weakened or negated copy. Glosses add small nudges for anchor words like "fast" or "poison".
+5. Subtitle counts give the rarity. Uncommon words of five letters or more become elites. Seeds are never rare.
+6. The result ships as a grouped JSON file of about 390 KB. The game needs no model at runtime and works offline.
 
-Tokens outside the vocabulary skip this layer and rely on form, typos, and affixes. A small in-browser embedding model could cover them later.
+Embeddings were the original plan. WordNet plus seeds was chosen instead because it is small, explainable, and needs no model download. Embeddings can be added later if coverage feels thin.
+
+Tokens outside the vocabulary skip this layer and rely on form, typos, and affixes.
 
 ## Layer 4: Category
 
@@ -290,7 +309,7 @@ The full system is too much for one step. Ship it in phases.
 | Phase | Contents | Status |
 |---|---|---|
 | 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
-| 2 | The meaning data, categories, and verbs as abilities | Next |
+| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon and Layer 3 shipped |
 | 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
 | 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
 

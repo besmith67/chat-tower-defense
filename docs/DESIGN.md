@@ -24,8 +24,8 @@ In short, each token passes through eight gene layers: identity, form, meaning, 
 
 Towers counter monster tags, and tags come from the generator.
 
-- **Element:** fire, ice, storm, poison, earth, metal, shadow, light, arcane, nature.
-- **Family:** beast, construct, food, person, body, place, weather, abstract, sound, meme.
+- **Element:** fire, frost, storm, venom, stone, spirit.
+- **Family:** beast, construct, food, person, body, place, elemental, abstract, sound, meme.
 - **Form:** spiky monsters are weak to blunt damage. Round monsters are weak to piercing damage.
 - **Special:** stealth monsters need detector towers. Fliers ignore ground blockers.
 
@@ -40,7 +40,8 @@ A 20,000-viewer chat cannot be allowed to send 20,000 times the monsters of a 20
 - **Message merging.** Duplicate messages stack into a horde or a titan. Popularity buys power within the budget.
 - **Popular first, nothing lost.** The most-sent species spend the budget first. Species that do not fit wait for the next wave instead of vanishing, and the panel shows which ones are waiting.
 - **Per-user cap.** Each viewer contributes at most one or two monsters per spawn window.
-- **Gold follows threat.** The streamer's income scales with the threat chat spent.
+- **Gold follows threat.** The streamer's income scales with the threat chat spent. Chat monsters pay 30 percent more bounty than the Wilds, because chat sends cleverer monsters.
+- **Titans are slow.** A merged titan's speed divides by its size, so a big spam titan is a slow tank rather than a fast leak.
 - **Chat size normalization.** Sample messages so big and small chats feel equally dangerous at the same level.
 
 ## The Wilds: simulated monsters
