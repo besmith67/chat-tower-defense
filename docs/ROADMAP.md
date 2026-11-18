@@ -147,7 +147,7 @@ Branch: `milestone-5-polish`.
 | ID | Package | Depends on | Status |
 |---|---|---|---|
 | M5.1 | Sound: procedural Web Audio effects for shots, hits, deaths, leaks, and wave start. A simple music loop. A mute toggle. | none | done: `src/game/audio.ts`. Every sound is synthesized, so no audio files or licenses. Rapid sounds are throttled. The music loop gets busier during waves. M mutes and is remembered. Needs a human ear: U4 should include whether the sound is pleasant. |
-| M5.2 | Tower upgrades: two levels per tower. | M2.4 | todo |
+| M5.2 | Tower upgrades: two levels per tower. | M2.4 | done: U upgrades the selected tower. Level 2 costs 60% of the tower and level 3 costs 100%; each level adds 60% damage and 10% range, and level 3 adds a perk (Needle fires faster, Hammer splashes wider, Frost slows harder, Flame burns hotter, Tesla chains further). The first numbers (+40% for 80%) made upgrades a trap. Bot with `TOWER_CAP=14`: offline 20/20 with 18.2 lives (vs 15.0 without upgrades); busy chat smart 13/20 (vs 15/20), so upgrades are a fair alternative, not a must. |
 | M5.3 | More maps and a map picker. | none | todo |
 | M5.4 | YouTube and Kick chat adapters. Research first: both need API keys or unofficial endpoints. | none | todo |
 | M5.5 | Streamer quality of life: remembered settings, an on-screen "how chat plays" card, a colorblind-safe palette, and an OBS-friendly layout. | none | todo |

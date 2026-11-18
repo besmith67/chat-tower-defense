@@ -8,7 +8,7 @@ import type { SpawnOrder } from './collector';
 import { elementMultiplier } from './elements';
 import { JAM_EVERY, JAM_RANGE, JAM_SECONDS, sabotageTarget } from './sabotage';
 import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
-import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
+import { armorFactor, formMultiplier, TOWERS, towerAtLevel, upgradeCost, type TowerDef, type TowerId } from './towers';
 
 export interface Monster {
   id: number;
@@ -58,6 +58,8 @@ export interface Tower {
   /** Kills per species key. Towers adapt to what they kill often. */
   kills: Map<string, number>;
   spent: number;
+  /** 1 to MAX_LEVEL. def holds the stats for this level. */
+  level: number;
 }
 
 export type Effectiveness = 'strong' | 'weak' | 'normal';
@@ -155,6 +157,7 @@ export class World {
       stunnedUntil: 0,
       kills: new Map(),
       spent: def.cost,
+      level: 1,
     };
     this.towers.push(tower);
     return tower;
@@ -162,6 +165,18 @@ export class World {
 
   towerAt(col: number, row: number): Tower | undefined {
     return this.towers.find((t) => t.col === col && t.row === row);
+  }
+
+  /** Raises a tower one level. Returns false at max level or without enough gold. */
+  upgradeTower(tower: Tower): boolean {
+    const base = TOWERS[tower.def.id];
+    const cost = upgradeCost(base, tower.level);
+    if (cost === null || this.gold < cost) return false;
+    this.gold -= cost;
+    tower.spent += cost;
+    tower.level++;
+    tower.def = towerAtLevel(base, tower.level);
+    return true;
   }
 
   sellTower(tower: Tower): number {

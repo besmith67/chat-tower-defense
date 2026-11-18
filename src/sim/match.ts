@@ -161,6 +161,11 @@ export class Match {
     return this.world.placeTower(id, col, row);
   }
 
+  upgradeTower(tower: Tower): boolean {
+    if (this.phase === 'won' || this.phase === 'lost') return false;
+    return this.world.upgradeTower(tower);
+  }
+
   sellTower(tower: Tower): number {
     return this.world.sellTower(tower);
   }

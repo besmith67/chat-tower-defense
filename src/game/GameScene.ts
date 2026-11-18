@@ -16,7 +16,7 @@ import { Bestiary } from '../sim/bestiary';
 import { openBestiary } from '../studio/bestiaryView';
 import { Match } from '../sim/match';
 import { sabotageTarget } from '../sim/sabotage';
-import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
+import { LEVEL3_PERK, MAX_LEVEL, TOWERS, TOWER_ORDER, upgradeCost, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
 import { AudioBus } from './audio';
 import { monsterTexture, towerTextures } from './monsterArt';
@@ -415,7 +415,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · M mute · ` chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · U upgrade · S sell · F speed · B book · M mute', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -520,7 +520,7 @@ export class GameScene extends Phaser.Scene {
     if (this.hoveredMonster && !this.hoveredMonster.alive) this.hoveredMonster = null;
     const monster = this.hoveredMonster ?? (this.selectedTower ? null : this.spotlight);
     const tower = this.hoveredMonster ? null : this.selectedTower;
-    const key = monster ? `m${monster.id}` : tower ? `t${tower.id}:${tower.kills.size}:${[...tower.kills.values()].join()}` : 'none';
+    const key = monster ? `m${monster.id}` : tower ? `t${tower.id}:${tower.level}:${this.match.world.gold >= (upgradeCost(TOWERS[tower.def.id], tower.level) ?? Infinity)}:${[...tower.kills.values()].join()}` : 'none';
     if (key === this.inspectKey) return;
     this.inspectKey = key;
     for (const o of this.inspectObjs) o.destroy();
@@ -588,10 +588,10 @@ export class GameScene extends Phaser.Scene {
   private inspectTower(t: Tower, x: number, add: <T extends Obj>(o: T) => T): void {
     add(this.add.text(x, 432, 'TOWER', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.muted })).setDepth(91));
     add(this.add.image(x + 22, 478, `tower-${t.def.id}`).setDepth(91));
-    add(this.add.text(x + 54, 460, t.def.name, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
+    add(this.add.text(x + 54, 460, `${t.def.name}  ${'★'.repeat(t.level)}${'☆'.repeat(MAX_LEVEL - t.level)}`, text({ fontSize: '20px', fontStyle: 'bold' })).setDepth(91));
     add(this.add.text(x, 508, t.def.blurb, text({ fontSize: '12px', color: COLORS.muted, wordWrap: { width: 250 } })).setDepth(91));
     const kills = [...t.kills.values()].reduce((a, b) => a + b, 0);
-    add(this.add.text(x, 548, `Kills: ${kills}`, text({ fontSize: '13px' })).setDepth(91));
+    add(this.add.text(x, 548, `Kills: ${kills} · damage ${Math.round(t.def.damage)} · range ${Math.round(t.def.range)}`, text({ fontSize: '13px' })).setDepth(91));
     const top = [...t.kills.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
     let y = 568;
     if (top.length) {
@@ -604,8 +604,16 @@ export class GameScene extends Phaser.Scene {
         y += 16;
       }
     }
+    const cost = upgradeCost(TOWERS[t.def.id], t.level);
+    if (cost !== null) {
+      const perk = t.level === 2 ? ` (${LEVEL3_PERK[t.def.id]})` : '';
+      const afford = this.match.world.gold >= cost;
+      add(this.add.text(x, 644, `Press U to upgrade for ◆ ${cost}${perk}`, text({ fontSize: '13px', color: afford ? COLORS.strong : COLORS.muted, wordWrap: { width: 250 } })).setDepth(91));
+    } else {
+      add(this.add.text(x, 644, `Max level: ${LEVEL3_PERK[t.def.id]}`, text({ fontSize: '13px', color: COLORS.muted })).setDepth(91));
+    }
     const refund = Math.floor(t.spent * BALANCE.sellRefund);
-    add(this.add.text(x, 664, `Press S to sell for ◆ ${refund}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(91));
+    add(this.add.text(x, 680, `Press S to sell for ◆ ${refund}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(91));
   }
 
   // ---------------------------------------------------------------- input
@@ -623,6 +631,7 @@ export class GameScene extends Phaser.Scene {
       this.match.startWave();
     } else if (key === 'f') this.cycleSpeed();
     else if (key === 's' && this.selectedTower) this.sellSelected();
+    else if (key === 'u' && this.selectedTower) this.upgradeSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
     else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
     else if (key === 'm') this.flash(this.audio.toggleMute() ? 'Sound off (M)' : 'Sound on (M)');
@@ -726,6 +735,23 @@ export class GameScene extends Phaser.Scene {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
     return !!tower;
+  }
+
+  private upgradeSelected(): void {
+    const t = this.selectedTower;
+    if (!t) return;
+    if (!this.match.upgradeTower(t)) {
+      this.audio.play('deny');
+      return this.flash(t.level >= MAX_LEVEL ? 'Already max level' : 'Not enough gold');
+    }
+    this.audio.play('build');
+    const view = this.towerViews.get(t.id);
+    if (view) {
+      view.setScale(0.92 + 0.08 * (t.level - 1));
+      this.tweens.add({ targets: view, angle: 360, duration: 300, onComplete: () => view.setAngle(0) });
+    }
+    this.floatText(sx(t.x), sy(t.y) - 24, `LEVEL ${t.level}`, COLORS.strong, 13);
+    this.inspectKey = '';
   }
 
   private sellSelected(): void {

@@ -39,6 +39,7 @@ Every fifth wave is a boss wave. Chat votes with `!vote 1`, `!vote 2`, or `!vote
 | 1 to 5 | Pick a tower to build |
 | Click | Build, or select a tower |
 | Esc or right click | Cancel |
+| U | Upgrade the selected tower (two levels; level 3 adds a perk) |
 | S | Sell the selected tower |
 | Space | Start the wave early |
 | F | Cycle game speed |
