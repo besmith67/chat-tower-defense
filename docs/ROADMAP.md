@@ -35,7 +35,7 @@ Or just "do the next package", which means the first package below whose status 
 | U1 | Run `gh auth refresh -h github.com -s workflow`. Then any chat can run `git push -u origin ci-workflows` and open a PR for it. The local `ci-workflows` branch holds the CI and Pages deploy workflows. | user |
 | U2 | Enable GitHub Pages: repo Settings, Pages, Source "GitHub Actions". | user |
 | U3 | Review and merge PR #1 (milestone 1). Later milestone PRs stack on it. | user |
-| U4 | Play a session with a real chat and report what felt good or bad. Best after M2.8. | user |
+| U4 | Play a session with a real chat and report what felt good or bad. Milestone 2 is ready for this. Especially: is offline too easy, is busy chat too hard, and do the monsters read at a glance? | user |
 | U5 | Register a Twitch developer app and share its Client ID (not the secret). Needed by M3.6 and M4.6. | user |
 
 ---
@@ -46,7 +46,7 @@ Shipped in PR #1: the TypeScript, Vite, Phaser 4, and Vitest project; generator 
 
 ---
 
-## Milestone 2: Meaning
+## Milestone 2: Meaning (done, in PR #2)
 
 Goal: a monster behaves like what its word means. Today `snail` and `rocket` differ only by how they sound. Branch: `milestone-2-meaning`.
 
@@ -106,10 +106,11 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** `fier` is a fire mutant, `megasnail` is a bigger, rarer snail, and `unhappy` flips the mood axis.
 - **Result.** `src/genome/affixes.ts`. All three examples work (`unhappy` is a real WordNet word whose antonym link already flips mood). -ify and -ize are not built: they need a mid-path transformation. Unknown tokens cost about 0.33 ms each for the typo search.
 
-### M2.8 Milestone 2 wrap-up: todo
+### M2.8 Milestone 2 wrap-up: done
 
 - **Depends on.** M2.2 to M2.7.
 - **Goal.** Balance sweep, playtest screenshots, docs updated, and the PR ready for review. Then hand U4 to the user.
+- **Result.** Found and fixed a live bug: the emote loader waited for all three providers, so one hung FFZ request blanked every third-party emote. Providers now apply independently with an 8-second timeout. README, design docs, and the test chat hint describe the meaning layer. Final balance, 20 runs each: offline smart 20/20 with 18.4 lives; busy chat smart 16/20 with 9.6, blind 13/20, worst 3/20, needles 0/20. PR #2 is ready for review.
 
 ---
 

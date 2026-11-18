@@ -1,6 +1,6 @@
 # Chat Tower Defense: Design Doc
 
-Status: milestone 1 is playable. See [ROADMAP.md](ROADMAP.md).
+Status: milestones 1 and 2 are playable. Words now carry meaning. See [ROADMAP.md](ROADMAP.md).
 
 ## Pitch
 

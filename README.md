@@ -52,6 +52,9 @@ Skip the setup screen by adding options to the URL. This is handy for an OBS bro
 Read [docs/MONSTER_GENERATION.md](docs/MONSTER_GENERATION.md) for the full design. In the current build:
 
 - **Meaning drives behavior.** About 34,000 English words and Twitch slang carry meaning. `snail` is slow and armored, `rocket` is a fast fire construct, `ghost` is a stealthy spirit that gets back up once, and rare words like `quixotic` are elites. Meaning also sets the element.
+- **What kind of thing it is sets the body.** Beasts walk on legs, constructs roll on armored wheels, food leaves a healing snack, sound words shout and stun towers, and memes wear shades and go viral.
+- **Verbs do things, adjectives buff.** `dig` burrows underground, `heal` heals its neighbors, `steal` takes gold if it gets through, and `jump` hops ahead. A lone adjective like `angry` or `fast` becomes a herald whose aura passes that meaning on.
+- **Typos and affixes count.** `fier` is a mutant fire, `megasnail` is a giant elite snail, `minisnail` is a pack, `unfire` is frost, and `resnail` gets back up.
 - **Sound shapes the body.** Sharp sounds like k, t, and z make spiky, fast monsters. Soft sounds like b, m, and o make round, tanky ones.
 - **Letters add detail.** Syllables become tail segments, vowels become eyes, and consonant clusters become horns. High Scrabble-value words become elites.
 - **Typing style adds quirks.** ALL CAPS enrages. aLtErNaTiNg case taunts towers. A trailing `!`, `?`, or `...` adds a charge, confusion, or drowsiness. Palindromes reflect hits, and l33tspeak adds armor.

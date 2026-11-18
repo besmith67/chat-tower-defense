@@ -328,8 +328,8 @@ The full system is too much for one step. Ship it in phases.
 | Phase | Contents | Status |
 |---|---|---|
 | 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
-| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon and Layers 3 to 5 shipped |
-| 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
+| 2 | The meaning data, categories, and verbs as abilities | Done |
+| 3 | Emote image analysis, the Emote Studio, and grammar combos | Next |
 | 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
 
 The implementation lives in `src/genome`. Tower adaptation from Layer 8 shipped early because it is cheap and central to the loop.
