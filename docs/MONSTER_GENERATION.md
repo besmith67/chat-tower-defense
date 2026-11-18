@@ -276,6 +276,7 @@ What the rest of chat does in the same window changes the result.
 - **Shipped.** Both resolve when the wave starts, using the eight meaning axes as a vector. Words need a meaning of strength 2 or more. Synonyms (cosine 0.92 or more, same element) fuse into one titan named after every word. Opposites (cosine -0.8 or less) cancel copy for copy, and the bigger side keeps what is left. The game announces each fusion and clash on screen.
 - **Rhyme chains.** Rhyming words spawned back to back link into a conga line that shares a shield.
 - **Alliteration.** Words with the same first sound move as a linked pack.
+- **Shipped rhymes and alliteration.** Three or more different words with the same rime form a conga line where each member is shielded. Three or more with the same opening consonant cluster form a pack where each member has a speed aura. Members spawn next to each other. At most one chain and one pack per wave, so they stay special.
 - **Copypasta.** A long identical message repeated by many viewers becomes a boss candidate.
 - **Tower sabotage.** Words close in meaning to a tower or its weakness spawn saboteurs that go after that tower type. `rust` targets metal cannons. `ground` targets lightning towers. `mirror` targets lasers. Chat watches the build and types the counter. This is the most direct chat-versus-streamer counterplay.
 - **Mentions.** An `@user` mention puts that viewer's name on the monster, if the streamer allows it. Typing the streamer's name spawns a rare doppelganger.

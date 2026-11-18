@@ -108,6 +108,8 @@ export interface Genome {
   overlay: EmoteRef | null;
   /** Set when synonyms in the same window fused into this monster: every word that went in. */
   fusion?: string[];
+  /** Set for members of a rhyme chain or alliteration pack, which spawn together. */
+  link?: string;
   /** Null for invented words, Wilds, numbers, and curated archetypes. */
   meaning: Meaning | null;
   element: Element | null;

@@ -906,8 +906,12 @@ export class GameScene extends Phaser.Scene {
   /** Announces fusions and clashes at the top of the map as the wave starts. */
   private showCrowd(events: CrowdEvent[]): void {
     events.slice(0, 4).forEach((e, i) => {
-      const message = e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}` : `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`;
-      const color = e.type === 'fusion' ? '#ffd166' : '#ff8fa3';
+      const message =
+        e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}`
+        : e.type === 'clash' ? `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`
+        : e.type === 'rhyme' ? `RHYME CHAIN  ${e.tokens.join(' · ')}  (shielded)`
+        : `PACK  ${e.tokens.join(' · ')}  (speed aura)`;
+      const color = e.type === 'fusion' ? '#ffd166' : e.type === 'clash' ? '#ff8fa3' : e.type === 'rhyme' ? '#7df9ff' : '#7cff9b';
       this.time.delayedCall(i * 600, () => {
         const t = this.add
           .text(LAYOUT.panelX / 2, LAYOUT.topBar + 40 + i * 30, message, text({ fontSize: '20px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 5 }))

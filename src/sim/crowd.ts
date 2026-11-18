@@ -9,7 +9,9 @@ import type { PendingSpecies } from './collector';
 
 export type CrowdEvent =
   | { type: 'fusion'; tokens: string[]; into: string }
-  | { type: 'clash'; a: string; b: string; cancelled: number };
+  | { type: 'clash'; a: string; b: string; cancelled: number }
+  | { type: 'rhyme'; tokens: string[] }
+  | { type: 'alliteration'; tokens: string[] };
 
 /** Minimum meaning strength (vector length) for a word to fuse or clash. Weak meanings never do. */
 const MIN_STRENGTH = 2;
@@ -88,4 +90,82 @@ export function resolveCrowd(species: Map<string, PendingSpecies>): CrowdEvent[]
     }
   }
   return events;
+}
+
+/** The rime: from the last vowel group to the end. "cat" and "hat" share "at". */
+export function rhymeKey(root: string): string | null {
+  const m = /[aeiouy]+[^aeiouy]*$/.exec(root);
+  if (!m || m[0].length < 2 || root.length < 3 || m[0] === root) return null;
+  return m[0];
+}
+
+/** The opening consonant sound: "sn" in snail and snake, "b" in big and bear. Vowel starts do not count. */
+export function onsetKey(root: string): string | null {
+  if (root.length < 3) return null;
+  const m = /^[^aeiouy]+/.exec(root);
+  return m ? m[0] : null;
+}
+
+const MIN_PATTERN = 3;
+
+/**
+ * Rhymes and alliteration among different chat words in the same window. Three or more rhyming
+ * words form a conga line that walks together, each shielded. Three or more words with the same
+ * first sound form a pack that speeds each other up. Each species joins at most one pattern.
+ */
+export function resolvePatterns(species: Map<string, PendingSpecies>): CrowdEvent[] {
+  const events: CrowdEvent[] = [];
+  const chat = [...species.values()].filter((p) => p.genome.source === 'chat' && !p.genome.emoji && !p.genome.fusion);
+  const taken = new Set<PendingSpecies>();
+
+  const groups = (keyOf: (root: string) => string | null) => {
+    const map = new Map<string, PendingSpecies[]>();
+    for (const p of chat) {
+      if (taken.has(p)) continue;
+      const key = keyOf(p.genome.root);
+      if (!key) continue;
+      const list = map.get(key) ?? [];
+      if (!list.some((q) => q.genome.root === p.genome.root)) list.push(p);
+      map.set(key, list);
+    }
+    // Only the biggest pattern of each kind per wave, so the effect stays an event, not the norm.
+    const best = [...map.entries()].filter(([, list]) => list.length >= MIN_PATTERN).sort((a, b) => b[1].length - a[1].length)[0];
+    return best ? [best] : [];
+  };
+
+  for (const [key, list] of groups(rhymeKey)) {
+    for (const p of list) {
+      taken.add(p);
+      p.genome = withQuirk({ ...p.genome, link: `rhyme:${key}` }, 'shielded');
+    }
+    events.push({ type: 'rhyme', tokens: list.map((p) => p.genome.token) });
+  }
+  for (const [key, list] of groups(onsetKey)) {
+    for (const p of list) {
+      taken.add(p);
+      p.genome = withQuirk({ ...p.genome, link: `pack:${key}` }, 'hype');
+    }
+    events.push({ type: 'alliteration', tokens: list.map((p) => p.genome.token) });
+  }
+  return events;
+}
+
+function withQuirk(g: Genome, quirk: Genome['quirks'][number]): Genome {
+  return g.quirks.includes(quirk) ? g : { ...g, quirks: [quirk, ...g.quirks].slice(0, 3) };
+}
+
+/** Pulls linked monsters (a rhyme chain or a pack) together in the spawn order, so they walk as a line. */
+export function groupLinked<T extends { genome: Genome }>(orders: T[]): T[] {
+  const out: T[] = [];
+  const placed = new Set<T>();
+  for (const o of orders) {
+    if (placed.has(o)) continue;
+    const link = o.genome.link;
+    const members = link ? orders.filter((x) => x.genome.link === link) : [o];
+    for (const m of members) {
+      placed.add(m);
+      out.push(m);
+    }
+  }
+  return out;
 }

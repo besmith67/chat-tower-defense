@@ -36,3 +36,25 @@ describe('crowd layer', () => {
     expect(c.takeWave(500, 'offline', mulberry32(1)).crowd).toEqual([]);
   });
 });
+
+describe('rhymes and alliteration', () => {
+  it('links three rhyming words into a shielded chain that spawns together', () => {
+    const plan = wave(['cat', 'ghost', 'hat', 'pizza', 'bat']);
+    expect(plan.crowd).toContainEqual({ type: 'rhyme', tokens: ['cat', 'hat', 'bat'] });
+    const chain = plan.orders.filter((o) => o.genome.link?.startsWith('rhyme'));
+    expect(chain).toHaveLength(3);
+    for (const o of chain) expect(o.genome.quirks).toContain('shielded');
+    const at = plan.orders.findIndex((o) => o.genome.link?.startsWith('rhyme'));
+    expect(plan.orders.slice(at, at + 3).every((o) => o.genome.link?.startsWith('rhyme'))).toBe(true);
+  });
+
+  it('packs three words with the same opening sound', () => {
+    const plan = wave(['snail', 'sneak', 'snake']);
+    expect(plan.crowd).toContainEqual({ type: 'alliteration', tokens: ['snail', 'sneak', 'snake'] });
+    expect(plan.orders.every((o) => o.genome.quirks.includes('hype'))).toBe(true);
+  });
+
+  it('needs three different words', () => {
+    expect(wave(['cat', 'cat', 'hat']).crowd).toEqual([]);
+  });
+});
