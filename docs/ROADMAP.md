@@ -127,7 +127,7 @@ Branch: `milestone-3-emotes`.
 | M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | done: `src/studio/studioView.ts` (dialog from the setup screen) and `src/sim/studio.ts` (pure, tested). Finds the channel id by joining chat anonymously, lists 7TV, BTTV, and FFZ channel emotes with search. Twitch sub emotes are not listed until M3.6 adds a login. Boss flags are saved for M4.1 to use. |
 | M3.6 | Twitch OAuth (implicit flow, Client ID from U5) and sub-tier rarity for emotes. | U5 | blocked: needs U5 |
 
-## Milestone 4: Chat as a force (in progress)
+## Milestone 4: Chat as a force (done except M4.6, in PR #4)
 
 Branch: `milestone-4-crowd`.
 
