@@ -12,7 +12,7 @@ The streamer plays a tower defense game. Chat is the enemy spawner. Each emote, 
 2. **Spawn window.** For a short window, chat messages are collected and converted into monsters.
 3. **Wave.** Monsters walk the path. Towers fire. Leaks cost lives.
 4. **Payout.** The streamer earns gold based on the threat that was sent, not only what was killed.
-5. Every few waves, chat votes on a **boss**.
+5. Every fifth wave is a **boss** wave. During the build phase before it, chat votes with `!vote 1`, `2`, or `3` among three candidates: the streamer's Emote Studio boss picks first, then the species chat sent most this run. The winner walks in last as one slow giant worth 30 percent of the wave's threat.
 
 ## Monster generation
 

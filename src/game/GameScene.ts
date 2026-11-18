@@ -10,7 +10,12 @@ import { analyzeEmotePixels, getEmoteGenes, setEmoteGenes } from '../genome/emot
 import { FAMILY_INFO, QUIRK_INFO, formText, imageText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
+import type { WavePlan } from '../sim/collector';
+import type { CrowdEvent } from '../sim/crowd';
+import { Bestiary } from '../sim/bestiary';
+import { openBestiary } from '../studio/bestiaryView';
 import { Match } from '../sim/match';
+import { sabotageTarget } from '../sim/sabotage';
 import { TOWERS, TOWER_ORDER, type TowerId } from '../sim/towers';
 import type { Monster, SimEvent, Tower } from '../sim/world';
 import { monsterTexture, towerTextures } from './monsterArt';
@@ -91,7 +96,7 @@ export class GameScene extends Phaser.Scene {
     this.settings = this.registry.get('settings');
     this.hub = this.registry.get('hub');
     setStreamerBlocklist(this.settings.blocklist);
-    this.match = new Match({ mode: this.settings.mode });
+    this.match = new Match({ mode: this.settings.mode, bestiary: Bestiary.load(this.settings.channel) });
     this.match.collector.setShowNames(this.settings.showNames);
     this.match.collector.setStudio(this.settings.studio ?? {});
     this.monsterViews = new Map();
@@ -145,6 +150,11 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < this.speed; i++) this.match.update(dt);
 
     for (const event of this.match.world.drainEvents()) this.onSimEvent(event);
+    if (this.match.lastPlan && this.match.lastPlan !== this.shownPlan) {
+      this.shownPlan = this.match.lastPlan;
+      this.showCrowd(this.match.lastPlan.crowd);
+      this.match.bestiary.save(this.settings.channel);
+    }
     this.syncMonsters();
     this.syncStuns();
     this.drawGhost();
@@ -399,12 +409,54 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · S sell · F speed · B bestiary · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
 
+  private voteRows: Obj[] = [];
+
+  /** The boss vote box at the top of the map, shown during the build phase before a boss wave. */
+  private refreshBossVote(): void {
+    for (const o of this.voteRows) o.destroy();
+    this.voteRows = [];
+    const vote = this.match.bossVote;
+    if (!vote || this.match.phase !== 'build') return;
+    const add = <T extends Obj>(o: T): T => {
+      this.voteRows.push(o);
+      return o;
+    };
+    const w = 480;
+    const x0 = LAYOUT.panelX / 2 - w / 2;
+    const y0 = LAYOUT.topBar + 10;
+    const box = add(this.add.graphics().setDepth(95));
+    box.fillStyle(COLORS.elite, 1).fillRoundedRect(x0 - 2, y0 - 2, w + 4, 128, 14);
+    box.fillStyle(COLORS.panel, 0.97).fillRoundedRect(x0, y0, w, 124, 12);
+    const offline = this.match.mode === 'offline';
+    const title = offline ? `BOSS WAVE ${this.match.wave} · the Wilds choose` : `BOSS VOTE · wave ${this.match.wave} · type !vote 1, 2, or 3`;
+    add(this.add.text(x0 + w / 2, y0 + 8, title, text({ fontSize: '14px', fontStyle: 'bold', color: '#ffd166' })).setOrigin(0.5, 0).setDepth(96));
+    const counts = vote.tally();
+    const total = Math.max(1, vote.total);
+    vote.candidates.forEach((c, i) => {
+      const cx = x0 + (i + 0.5) * (w / 3);
+      const tex = monsterTexture(this, c.genome);
+      const icon = add(this.add.image(cx - 50, y0 + 62, tex.key).setOrigin(tex.originX, tex.originY).setDepth(96));
+      icon.setScale(Math.min(1, 36 / (c.genome.look.radius * 2)));
+      if (c.genome.emote && this.textures.exists(this.emoteKey(c.genome.emote))) {
+        add(this.add.image(cx - 50, y0 + 62, this.emoteKey(c.genome.emote)).setDisplaySize(26, 26).setDepth(97));
+      }
+      if (c.genome.emoji) add(this.emojiFace(cx - 50, y0 + 62, c.genome.emoji, 22).setDepth(97));
+      add(this.add.text(cx - 26, y0 + 40, `${i + 1}`, text({ fontSize: '13px', fontStyle: 'bold', color: '#ffd166' })).setDepth(96));
+      const name = c.genome.source === 'wilds' ? `⟡ ${c.genome.token}` : c.genome.token;
+      add(this.add.text(cx - 12, y0 + 40, name.length > 11 ? name.slice(0, 10) + '…' : name, text({ fontSize: '14px', fontStyle: 'bold' })).setDepth(96));
+      add(this.add.text(cx - 26, y0 + 62, offline ? '' : `${counts[i]} vote${counts[i] === 1 ? '' : 's'}`, text({ fontSize: '12px', color: COLORS.muted })).setDepth(96));
+      add(this.add.rectangle(cx - 26, y0 + 86, 96, 8, 0x2b2550).setOrigin(0).setDepth(96));
+      if (!offline) add(this.add.rectangle(cx - 26, y0 + 86, Math.max(2, (96 * counts[i]) / total), 8, COLORS.elite).setOrigin(0).setDepth(97));
+    });
+  }
+
   private refreshPanel(): void {
+    this.refreshBossVote();
     for (const o of this.panelRows) o.destroy();
     this.panelRows = [];
     const x = LAYOUT.panelX + 16;
@@ -516,6 +568,8 @@ export class GameScene extends Phaser.Scene {
     y += bars.length * 14 + 6;
 
     const lines = g.quirks.slice(0, 3).map((q) => `${QUIRK_INFO[q].label}: ${QUIRK_INFO[q].detail}`);
+    const target = sabotageTarget(g);
+    if (target) lines.unshift(`Saboteur: jams ${TOWERS[target].name} towers it walks past.`);
     if (g.family && g.family !== 'beast') lines.push(`${FAMILY_INFO[g.family].label}: ${FAMILY_INFO[g.family].trait}`);
     for (const line of lines) {
       if (y > 650) break;
@@ -553,6 +607,7 @@ export class GameScene extends Phaser.Scene {
   private onKey(e: KeyboardEvent): void {
     const target = e.target as HTMLElement | null;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+    if (document.querySelector('dialog[open]')) return;
     const key = e.key.toLowerCase();
     const tower = TOWER_ORDER.find((id) => TOWERS[id].hotkey === key);
     if (tower) this.selectBuild(tower);
@@ -563,6 +618,7 @@ export class GameScene extends Phaser.Scene {
     } else if (key === 'f') this.cycleSpeed();
     else if (key === 's' && this.selectedTower) this.sellSelected();
     else if (key === 'r' && this.overlay) this.scene.restart();
+    else if (key === 'b') openBestiary(this.settings.channel, this.match.bestiary);
     else if (key === '`') {
       e.preventDefault();
       window.dispatchEvent(new Event('toggle-test-chat'));
@@ -711,6 +767,10 @@ export class GameScene extends Phaser.Scene {
     switch (e.type) {
       case 'spawn':
         this.createMonsterView(e.monster);
+        if (e.monster.order.boss) {
+          this.cameras.main.shake(300, 0.006);
+          this.floatText(LAYOUT.panelX / 2, LAYOUT.topBar + 60, `👑 BOSS: ${e.monster.genome.token}`, '#ffd166', 26);
+        }
         if (e.monster.genome.source === 'chat' && e.monster.order.cost > 0) this.spotlight = e.monster;
         break;
       case 'shot':
@@ -758,6 +818,12 @@ export class GameScene extends Phaser.Scene {
       }
       case 'viral':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
+        break;
+      case 'jam':
+        for (const t of e.towers) {
+          this.boltFx(sx(e.monster.x), sy(e.monster.y), sx(t.x), sy(t.y));
+          this.floatText(sx(t.x), sy(t.y) - 26, 'JAMMED', '#ff8fa3', 13);
+        }
         break;
       case 'hop':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'hop', '#ffffff', 11);
@@ -849,6 +915,34 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private shownPlan: WavePlan | null = null;
+
+  /** Announces fusions and clashes at the top of the map as the wave starts. */
+  private showCrowd(events: CrowdEvent[]): void {
+    const lines: [string, string][] = events.map((e) => [
+      e.type === 'fusion' ? `FUSION  ${e.tokens.join(' + ')}`
+      : e.type === 'clash' ? `CLASH  ${e.a} ⚔ ${e.b}  (${e.cancelled} cancelled)`
+      : e.type === 'rhyme' ? `RHYME CHAIN  ${e.tokens.join(' · ')}  (shielded)`
+      : `PACK  ${e.tokens.join(' · ')}  (speed aura)`,
+      e.type === 'fusion' ? '#ffd166' : e.type === 'clash' ? '#ff8fa3' : e.type === 'rhyme' ? '#7df9ff' : '#7cff9b',
+    ]);
+    for (const token of this.match.evolutions) lines.unshift([`EVOLVED  ${token} Prime`, '#ff8fd1']);
+    const found = this.match.discoveries;
+    if (found.length === 1) lines.push([`NEW SPECIES  ${found[0].token}  found by ${found[0].by}`, '#c9b6ff']);
+    else if (found.length > 1) lines.push([`${found.length} NEW SPECIES  ${found.slice(0, 3).map((d) => d.token).join(', ')}${found.length > 3 ? '…' : ''}`, '#c9b6ff']);
+    lines.slice(0, 4).forEach(([message, color], i) => {
+      this.time.delayedCall(i * 600, () => {
+        const t = this.add
+          .text(LAYOUT.panelX / 2, LAYOUT.topBar + 40 + i * 30, message, text({ fontSize: '20px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 5 }))
+          .setOrigin(0.5)
+          .setDepth(98)
+          .setScale(0.6);
+        this.tweens.add({ targets: t, scale: 1, duration: 180, ease: 'Back.Out' });
+        this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 500, onComplete: () => t.destroy() });
+      });
+    });
+  }
+
   private floatText(x: number, y: number, message: string, color: string, size = 14): void {
     if (this.floaters > 45) return;
     this.floaters++;
@@ -928,12 +1022,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     const wild = g.source === 'wilds';
-    const labelText = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    const base = wild ? `⟡ ${g.token}` : m.order.copies > 1 ? `${g.token} ×${m.order.copies}` : g.token;
+    const labelText = m.order.boss ? `👑 BOSS ${base}` : base;
     const label = this.add
       .text(0, -m.radius - 10, labelText, text({ fontSize: wild ? '11px' : '13px', fontStyle: 'bold', color: wild ? COLORS.wildsText : '#ffffff', stroke: '#000000', strokeThickness: 4 }))
       .setOrigin(0.5, 1)
       // Wilds are marked by their glitchy look. Hiding their names keeps chat's words readable.
-      .setVisible(!wild);
+      .setVisible(!wild || !!m.order.boss);
     const hpBg = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x000000, 0.7).setOrigin(0, 0.5).setVisible(false);
     const hpFill = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x7cff9b).setOrigin(0, 0.5).setVisible(false);
     // Heralds and healers show their aura so the streamer can see why neighbors got tougher.

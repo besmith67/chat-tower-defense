@@ -145,7 +145,7 @@ Tokens outside the vocabulary skip this layer and rely on form, typos, and affix
 
 The kind of thing a word names sets its family and body plan. Shipped: families come from the WordNet lexicographer file of a noun's main sense, or from the seed file. Only words used mainly as nouns get a family; verbs and adjectives are handled by Layer 5. Body plans add parts around the shape (legs, wheels, a halo) and never change the spiky or round outline.
 
-Shipped traits are deliberately small: beast none, construct +armor and wheels, food heals neighbors 15 percent on death, person dodges 15 percent of Needle and Flame shots, body part floats and ignores Frost slows, place has 15 percent more health and 10 percent less speed, elemental squares its element multipliers and halves armor, spirit (abstract) takes 0.8x from Needle and Hammer, sound shouts every 5 seconds to stun towers within 75 px for half a second, and meme has a 30 percent chance to leave a smaller copy on death. Weather is renamed Elemental and Abstract shows as Spirit on screen.
+Shipped traits are deliberately small: beast none, construct +armor and wheels, food heals neighbors 15 percent on death, person dodges 15 percent of Needle and Flame shots, body part floats and ignores Frost slows, place has 15 percent more health and 10 percent less speed, elemental squares its element multipliers and halves armor, spirit (abstract) takes 0.8x from Needle and Hammer, sound shouts every 5 seconds to stun towers within 75 px for half a second, and meme has a 30 percent chance to leave a smaller copy on death. Weather is renamed Elemental and Abstract shows as Idea on screen, so it never reads like the Spirit element.
 
 | Family | Example words | Body plan | Signature trait |
 |---|---|---|---|
@@ -273,10 +273,12 @@ What the rest of chat does in the same window changes the result.
 - **Burst merging.** Copies of the same species within a few seconds merge. Swarm-type species form a horde. Others form a titan whose size grows with the count.
 - **Synonym fusion.** Different words with close meanings fuse. `big`, `huge`, and `giant` together make a colossus that carries all three names.
 - **Antonym clash.** Opposites in the same window, such as `hot` and `cold`, annihilate each other or fuse into an unstable hybrid. Part of chat can sabotage the rest of chat.
+- **Shipped.** Both resolve when the wave starts, using the eight meaning axes as a vector. Words need a meaning of strength 2 or more. Synonyms (cosine 0.92 or more, same element) fuse into one titan named after every word. Opposites (cosine -0.8 or less) cancel copy for copy, and the bigger side keeps what is left. The game announces each fusion and clash on screen.
 - **Rhyme chains.** Rhyming words spawned back to back link into a conga line that shares a shield.
 - **Alliteration.** Words with the same first sound move as a linked pack.
+- **Shipped rhymes and alliteration.** Three or more different words with the same rime form a conga line where each member is shielded. Three or more with the same opening consonant cluster form a pack where each member has a speed aura. Members spawn next to each other. At most one chain and one pack per wave, so they stay special.
 - **Copypasta.** A long identical message repeated by many viewers becomes a boss candidate.
-- **Tower sabotage.** Words close in meaning to a tower or its weakness spawn saboteurs that go after that tower type. `rust` targets metal cannons. `ground` targets lightning towers. `mirror` targets lasers. Chat watches the build and types the counter. This is the most direct chat-versus-streamer counterplay.
+- **Tower sabotage.** Words close in meaning to a tower or its weakness spawn saboteurs that go after that tower type. `rust` targets metal cannons. `ground` targets lightning towers. `mirror` targets lasers. Chat watches the build and types the counter. This is the most direct chat-versus-streamer counterplay. Shipped with short hand-written lists per tower in `src/sim/sabotage.ts`; a saboteur jams matching towers it walks past.
 - **Mentions.** An `@user` mention puts that viewer's name on the monster, if the streamer allows it. Typing the streamer's name spawns a rare doppelganger.
 
 ## Layer 8: History

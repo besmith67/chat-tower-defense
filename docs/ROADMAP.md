@@ -127,17 +127,17 @@ Branch: `milestone-3-emotes`.
 | M3.5 | Emote Studio: a setup screen listing the channel's emotes as species. The streamer can rename, disable, pick a signature ability, or mark boss candidates. Saved per channel in local storage. | M3.1 | done: `src/studio/studioView.ts` (dialog from the setup screen) and `src/sim/studio.ts` (pure, tested). Finds the channel id by joining chat anonymously, lists 7TV, BTTV, and FFZ channel emotes with search. Twitch sub emotes are not listed until M3.6 adds a login. Boss flags are saved for M4.1 to use. |
 | M3.6 | Twitch OAuth (implicit flow, Client ID from U5) and sub-tier rarity for emotes. | U5 | blocked: needs U5 |
 
-## Milestone 4: Chat as a force
+## Milestone 4: Chat as a force (done except M4.6, in PR #4)
 
 Branch: `milestone-4-crowd`.
 
 | ID | Package | Depends on | Status |
 |---|---|---|---|
-| M4.1 | Boss waves every fifth wave. Chat votes with `!vote 1/2/3` among three candidates built from the run's most popular species. | M2.3 | todo |
-| M4.2 | Synonym fusion and antonym clash in the spawn window, using lexicon axes. | M2.3 | todo |
-| M4.3 | Rhyme chains and alliteration packs. | M2.3 | todo |
-| M4.4 | Tower sabotage: words near a tower's weakness (`rust`, `ground`, `water`) spawn saboteurs that go after that tower type. | M2.4 | todo |
-| M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | todo |
+| M4.1 | Boss waves every fifth wave. Chat votes with `!vote 1/2/3` among three candidates built from the run's most popular species. | M2.3 | done: `src/sim/boss.ts`. Candidates are Emote Studio boss picks, then the most-sent species, then Wilds. Bare `1`, `2`, `3` also vote and never spawn. The boss takes 30% of the wave budget as one slow giant (titan discount applies) and walks in last. Healing now divides by size squared, because percent regen made a love-boss unkillable. Busy chat: smart 18/20, blind 12/20, worst 4/20. |
+| M4.2 | Synonym fusion and antonym clash in the spawn window, using lexicon axes. | M2.3 | done: `src/sim/crowd.ts`, resolved when a wave starts and announced on screen. Fusion: meaning vectors with cosine 0.92 or more, a different dictionary word, and a matching element merge into one titan carrying every name (big+huge+giant). Clash: cosine -0.8 or less cancels copy for copy (hot vs cold). Fusion is not an elite: an elite bonus on top of the merged copies leaked from wave 1. Busy chat: smart 18/20, blind 15/20, worst 7/20. |
+| M4.3 | Rhyme chains and alliteration packs. | M2.3 | done: in `src/sim/crowd.ts`. Three or more different words sharing a rime (cat, hat, bat) form a shielded chain that spawns in a line; three or more sharing an opening consonant cluster (snail, sneak, snake) form a pack with a speed aura. One of each per wave at most. Busy chat: smart 17/20, blind 13/20, worst 6/20. |
+| M4.4 | Tower sabotage: words near a tower's weakness (`rust`, `ground`, `water`) spawn saboteurs that go after that tower type. | M2.4 | done: `src/sim/sabotage.ts`. About eight counter words per tower (water jams Flame, melt jams Frost, ground jams Tesla, armor jams Needle, pillow jams Hammer). Saboteurs jam matching towers within 90 px for 2.5 s, at most every 5 s. The balance bot's chat now includes some. Busy chat: smart 15/20, blind 16/20, worst 4/20. The smart bot does not react to sabotage yet; a real streamer would spread tower types. |
+| M4.5 | Bestiary with first-discovery credit per channel, and evolution when a species leaks often. Local storage. | M2.3 | done: `src/sim/bestiary.ts` and `src/studio/bestiaryView.ts` (B key in game, or the setup screen). New species and evolutions are announced at wave start. A species that leaks 3 times in a run comes back as its Prime form: elite, 25% more power, a bit bigger. The Abstract family now shows as Idea, so it never reads like the Spirit element. |
 | M4.6 | Channel point redemptions through EventSub WebSocket: rewards that help or hurt the streamer. | M3.6 | blocked: needs U5 |
 
 ## Milestone 5: Polish and reach

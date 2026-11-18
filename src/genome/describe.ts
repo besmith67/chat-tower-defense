@@ -39,7 +39,7 @@ export const FAMILY_INFO: Record<Family, { label: string; trait: string }> = {
   body: { label: 'Body part', trait: 'Floats, so Frost cannot slow it.' },
   place: { label: 'Place', trait: 'Walking terrain: tougher but slower.' },
   elemental: { label: 'Elemental', trait: 'Pure element: weaknesses and resistances hit twice as hard. Little armor.' },
-  abstract: { label: 'Spirit', trait: 'Resists physical damage from Needle and Hammer.' },
+  abstract: { label: 'Idea', trait: 'Not quite solid: resists physical damage from Needle and Hammer.' },
   sound: { label: 'Sound', trait: 'Shouts every few seconds, stunning nearby towers briefly.' },
   meme: { label: 'Meme', trait: 'Goes viral: sometimes leaves a copy when it dies.' },
 };

@@ -6,6 +6,7 @@ import type { Genome } from '../genome';
 import { BALANCE } from './balance';
 import type { SpawnOrder } from './collector';
 import { elementMultiplier } from './elements';
+import { JAM_EVERY, JAM_RANGE, JAM_SECONDS, sabotageTarget } from './sabotage';
 import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
 import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
 
@@ -37,6 +38,9 @@ export interface Monster {
   burnBy: Tower | null;
   nextShoutAt: number;
   nextHopAt: number;
+  /** The tower type this saboteur jams, or null. */
+  sabotage: TowerId | null;
+  nextJamAt: number;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -73,6 +77,7 @@ export type SimEvent =
   | { type: 'shout'; monster: Monster; towers: Tower[] }
   | { type: 'viral'; monster: Monster }
   | { type: 'hop'; monster: Monster }
+  | { type: 'jam'; monster: Monster; towers: Tower[] }
   | { type: 'steal'; monster: Monster; amount: number }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
@@ -94,6 +99,8 @@ export class World {
   wave = 1;
   private queue: QueuedSpawn[] = [];
   private events: SimEvent[] = [];
+  /** Leaks per species this run, for evolution. */
+  readonly leaksBySpecies = new Map<string, number>();
   private nextId = 1;
 
   constructor(gold: number = BALANCE.startingGold, lives: number = BALANCE.startingLives) {
@@ -214,6 +221,8 @@ export class World {
       burnBy: null,
       nextShoutAt: this.time + 2 + (genome.look.phase % 2),
       nextHopAt: this.time + 2 + (genome.look.phase % 1),
+      sabotage: sabotageTarget(genome),
+      nextJamAt: 0,
       bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
@@ -241,7 +250,9 @@ export class World {
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.age += dt;
-      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      // Percentage healing would make huge bodies unkillable, so titans and bosses heal slower.
+      const healScale = 1 / (m.order.scale * m.order.scale);
+      if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * BALANCE.regenPerSecond * healScale * dt);
       if (this.time < m.burnUntil && m.burnBy) {
         m.hp -= m.burnDps * elementMultiplier('fire', m.genome.element) * dt;
         if (m.hp <= 0) {
@@ -254,10 +265,10 @@ export class World {
       for (const h of this.heraldsNear(m)) {
         const a = h.genome.meaning!.axes;
         speed *= 1 + 0.06 * a.speed;
-        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * dt);
+        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * healScale * dt);
       }
       if (healers.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) {
-        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * healScale * dt);
       }
       m.dist += speed * dt;
 
@@ -273,6 +284,15 @@ export class World {
         this.events.push({ type: 'hop', monster: m });
       }
 
+      if (m.sabotage && this.time >= m.nextJamAt) {
+        const jammed = this.towers.filter((t) => t.def.id === m.sabotage && Math.hypot(t.x - m.x, t.y - m.y) < JAM_RANGE);
+        if (jammed.length) {
+          for (const t of jammed) t.stunnedUntil = Math.max(t.stunnedUntil, this.time + JAM_SECONDS);
+          m.nextJamAt = this.time + JAM_EVERY;
+          this.events.push({ type: 'jam', monster: m, towers: jammed });
+        }
+      }
+
       if (m.genome.family === 'sound' && this.time >= m.nextShoutAt) {
         m.nextShoutAt = this.time + 5;
         const stunned = this.towers.filter((t) => Math.hypot(t.x - m.x, t.y - m.y) < 75);
@@ -284,6 +304,7 @@ export class World {
       if (m.dist >= path.length) {
         m.alive = false;
         this.lives = Math.max(0, this.lives - m.livesCost);
+        this.leaksBySpecies.set(m.genome.key, (this.leaksBySpecies.get(m.genome.key) ?? 0) + 1);
         this.events.push({ type: 'leak', monster: m });
         if (m.genome.quirks.includes('thief')) {
           const amount = Math.min(this.gold, 4 + 6 * m.livesCost);

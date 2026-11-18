@@ -5,6 +5,7 @@
  */
 import { CURATED_EMOTES } from '../genome/curated';
 import { isBlocked, makeGenome, makeWildGenome, readEmoji, type Genome, type Rng } from '../genome';
+import { groupLinked, resolveCrowd, resolvePatterns, type CrowdEvent } from './crowd';
 import { applyStudio, type StudioConfig } from './studio';
 import type { ChatEmote, ChatEvent, ChatMessage } from '../chat/types';
 import { BALANCE } from './balance';
@@ -36,6 +37,8 @@ export interface SpawnOrder {
   cost: number;
   /** How many copies of the token chat sent for this monster. */
   copies: number;
+  /** The boss of a boss wave. */
+  boss?: boolean;
   /** Who sent it. Null for the Wilds. */
   sender: string | null;
 }
@@ -45,6 +48,8 @@ export interface WavePlan {
   budget: number;
   chatThreat: number;
   wildThreat: number;
+  /** Fusions and clashes resolved when the wave started. */
+  crowd: CrowdEvent[];
 }
 
 export class SpawnCollector {
@@ -63,6 +68,11 @@ export class SpawnCollector {
   /** The streamer's Emote Studio choices: renames, disabled emotes, signature abilities. */
   setStudio(config: StudioConfig): void {
     this.studio = config;
+  }
+
+  /** Marked as a boss candidate in the Emote Studio. */
+  isBossPick(genome: Genome): boolean {
+    return !!(genome.emote && this.studio[genome.emote.id]?.boss);
   }
 
   /** Pending species in the order they will be spent: most copies first, then earliest. */
@@ -135,6 +145,7 @@ export class SpawnCollector {
 
   takeWave(budget: number, mode: ChatMode, rng: Rng): WavePlan {
     this.refreshEmotes();
+    const crowd = mode === 'offline' ? [] : [...resolveCrowd(this.species), ...resolvePatterns(this.species)];
     const orders: SpawnOrder[] = [];
     let remaining = budget;
     let chatThreat = 0;
@@ -168,7 +179,7 @@ export class SpawnCollector {
     }
 
     this.perUser.clear();
-    return { orders: interleave(orders, rng), budget, chatThreat, wildThreat };
+    return { orders: groupLinked(interleave(orders, rng)), budget, chatThreat, wildThreat, crowd };
   }
 
   /** Keeps the carry-over backlog bounded by dropping the least popular, oldest species. */

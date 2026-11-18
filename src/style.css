@@ -77,7 +77,9 @@ code { color: var(--gold); }
   cursor: pointer;
 }
 .setup button { width: 100%; padding: 12px; font-size: 20px; }
-.setup button.secondary { margin: 4px 0 14px; padding: 8px; font-size: 15px; background: transparent; border-color: var(--edge); }
+.setup button.secondary { padding: 8px; font-size: 15px; background: transparent; border-color: var(--edge); }
+.setup .row-buttons { display: flex; gap: 8px; margin: 4px 0 14px; }
+.bestiary-face { width: 48px; height: 48px; flex: none; display: grid; place-items: center; font-size: 32px; }
 .setup button:hover, .test-chat button:hover { filter: brightness(1.15); }
 
 .test-chat {
