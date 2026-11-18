@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { EmoteDirectory } from './chat/emoteDirectory';
 import { ChatHub } from './chat/hub';
 import { LocalChatSource } from './chat/localSource';
+import { KickChatSource } from './chat/kick';
 import { TwitchChatSource } from './chat/twitch';
 import { GameScene } from './game/GameScene';
 import { settingsFromUrl, type GameSettings } from './game/settings';
@@ -21,6 +22,7 @@ const mapSelect = field<HTMLSelectElement>('map');
 mapSelect.replaceChildren(...MAPS.map((m) => new Option(`${m.name}: ${m.blurb}`, m.id)));
 restoreSetup();
 if (fromUrl.channel) field<HTMLInputElement>('channel').value = fromUrl.channel;
+if (fromUrl.kick) field<HTMLInputElement>('kick').value = fromUrl.kick;
 if (fromUrl.showNames !== undefined) field<HTMLInputElement>('showNames').checked = fromUrl.showNames;
 if (fromUrl.map) mapSelect.value = fromUrl.map;
 if (fromUrl.mode) {
@@ -37,6 +39,7 @@ setup.addEventListener('submit', (e) => {
     channel: String(data.get('channel') ?? '').trim(),
     studio: loadStudio(String(data.get('channel') ?? '').trim()),
     showNames: data.get('showNames') === 'on',
+    kick: String(data.get('kick') ?? '').trim(),
     map: String(data.get('map') ?? 'switchback'),
     blocklist: String(data.get('blocklist') ?? '')
       .split(',')
@@ -68,10 +71,11 @@ async function start(settings: GameSettings): Promise<void> {
   void emotes.loadGlobal();
   const hub = new ChatHub(emotes);
   if (settings.channel && settings.mode !== 'offline') hub.add(new TwitchChatSource(settings.channel));
+  if (settings.kick && settings.mode !== 'offline') hub.add(new KickChatSource(settings.kick));
   const local = new LocalChatSource();
   hub.add(local);
   hub.start();
-  wireTestChat(local, !settings.channel && settings.mode !== 'offline');
+  wireTestChat(local, !settings.channel && !settings.kick && settings.mode !== 'offline');
 
   // Wait briefly for the web font so Phaser text renders in it, but never block on it.
   await Promise.race([document.fonts.load('600 16px Fredoka'), new Promise((r) => setTimeout(r, 1500))]);

@@ -332,13 +332,13 @@ export class GameScene extends Phaser.Scene {
       this.hud.split.setText(`Chat ${chat}% · Wilds ${100 - chat}%`);
     }
 
-    const twitch = this.hub.statuses.get('twitch');
     const rate = this.hub.messagesPerMinute();
     const emoteCount = this.hub.emotes?.size ?? 0;
-    if (twitch) {
-      const dot = twitch.status === 'connected' ? '●' : '○';
-      this.hud.status.setText(`Twitch ${twitch.detail || ''} ${dot} ${twitch.status}  ·  ${rate} msg/min  ·  ${emoteCount} emotes`);
-      this.hud.status.setColor(twitch.status === 'connected' ? COLORS.chatText : COLORS.muted);
+    const live = (['twitch', 'kick'] as const).map((p) => this.hub.statuses.get(p)).filter((s) => !!s);
+    if (live.length) {
+      const parts = live.map((s) => `${s.platform === 'kick' ? 'Kick' : 'Twitch'} ${s.status === 'connected' ? '●' : '○'} ${s.status === 'error' ? s.detail : s.status}`);
+      this.hud.status.setText(`${parts.join('  ')}  ·  ${rate} msg/min${emoteCount ? `  ·  ${emoteCount} emotes` : ''}`);
+      this.hud.status.setColor(live.some((s) => s.status === 'connected') ? COLORS.chatText : COLORS.muted);
     } else {
       this.hud.status.setText(`No channel · test chat (\`)  ·  ${rate} msg/min`);
     }
@@ -497,7 +497,7 @@ export class GameScene extends Phaser.Scene {
         this.panelRows.push(this.add.image(x + 12, y + 12, this.emoteKey(p.genome.emote)).setDisplaySize(20, 20).setDepth(92).setAlpha(alpha));
       }
       const copies = p.contributions.length;
-      this.panelRows.push(this.add.text(x + 32, y + 3, p.genome.token, text({ fontSize: '15px', fontStyle: 'bold' })).setDepth(91).setAlpha(alpha));
+      this.panelRows.push(this.add.text(x + 32, y + 3, p.genome.token.length > 16 ? p.genome.token.slice(0, 15) + '…' : p.genome.token, text({ fontSize: '15px', fontStyle: 'bold' })).setDepth(91).setAlpha(alpha));
       const right = waiting ? 'waiting' : copies > 1 ? `×${copies}` : '';
       if (right) {
         this.panelRows.push(
