@@ -5,8 +5,8 @@
 import Phaser from 'phaser';
 import type { ChatHub } from '../chat/hub';
 import type { ChatEmote, ChatEvent } from '../chat/types';
-import { setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
-import { QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
+import { makeGenome, setStreamerBlocklist, type EmoteRef, type Genome } from '../genome';
+import { FAMILY_INFO, QUIRK_INFO, formText, meaningText, weaknessText } from '../genome/describe';
 import { BALANCE } from '../sim/balance';
 import { BASE_TILE, COLS, ROWS, TILE, tileKey } from '../sim/map';
 import { Match } from '../sim/match';
@@ -484,9 +484,11 @@ export class GameScene extends Phaser.Scene {
     });
     y += bars.length * 14 + 6;
 
-    for (const q of g.quirks.slice(0, 3)) {
-      const info = QUIRK_INFO[q];
-      const t = add(this.add.text(x, y, `${info.label}: ${info.detail}`, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91));
+    const lines = g.quirks.slice(0, 3).map((q) => `${QUIRK_INFO[q].label}: ${QUIRK_INFO[q].detail}`);
+    if (g.family && g.family !== 'beast') lines.push(`${FAMILY_INFO[g.family].label}: ${FAMILY_INFO[g.family].trait}`);
+    for (const line of lines) {
+      if (y > 650) break;
+      const t = add(this.add.text(x, y, line, text({ fontSize: '12px', color: COLORS.text, wordWrap: { width: 250 } })).setDepth(91));
       y += t.height + 3;
     }
     add(this.add.text(x, Math.min(y + 2, 672), weaknessText(g), text({ fontSize: '12px', color: COLORS.strong, wordWrap: { width: 250 } })).setDepth(91));
@@ -598,6 +600,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Places a tower exactly like a click would. Used by scripted playtests. */
+  /** Debug only: draws the given words' monsters large in a grid over the game, for art review. */
+  debugGallery(words: string[], scale = 2.5): void {
+    const layer = this.add.container(0, 0).setDepth(500);
+    layer.add(this.add.rectangle(0, 0, LAYOUT.width, LAYOUT.height, COLORS.background, 0.96).setOrigin(0));
+    const cols = Math.min(6, words.length);
+    const cellW = LAYOUT.width / cols;
+    const cellH = 170;
+    words.forEach((word, i) => {
+      const genome = makeGenome(word);
+      if (!genome) return;
+      const tex = monsterTexture(this, genome);
+      const x = (i % cols) * cellW + cellW / 2;
+      const y = Math.floor(i / cols) * cellH + 90;
+      layer.add(this.add.image(x, y, tex.key).setOrigin(tex.originX, tex.originY).setScale(scale));
+      const label = genome.family ? `${word} · ${FAMILY_INFO[genome.family].label}` : word;
+      layer.add(this.add.text(x, y + 62, label, text({ fontSize: '15px', fontStyle: 'bold' })).setOrigin(0.5, 0));
+    });
+  }
+
   debugPlace(id: TowerId, col: number, row: number): boolean {
     const tower = this.match.placeTower(id, col, row);
     if (tower) this.addTowerView(tower);
@@ -682,6 +703,24 @@ export class GameScene extends Phaser.Scene {
       }
       case 'heal':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, '+cope', '#7cff9b', 12);
+        break;
+      case 'dodge':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'DODGE', '#ffffff', 11);
+        break;
+      case 'snack': {
+        const ring = this.add.circle(sx(e.monster.x), sy(e.monster.y), 10, 0x7cff9b, 0.2).setStrokeStyle(2, 0x7cff9b, 0.8).setDepth(40);
+        this.tweens.add({ targets: ring, radius: 80, alpha: 0, duration: 420, onComplete: () => ring.destroy() });
+        if (e.healed) this.floatText(sx(e.monster.x), sy(e.monster.y) - 18, `snack +${e.healed}`, '#7cff9b', 12);
+        break;
+      }
+      case 'shout': {
+        const ring = this.add.circle(sx(e.monster.x), sy(e.monster.y), 12).setStrokeStyle(3, 0xffffff, 0.8).setDepth(40);
+        this.tweens.add({ targets: ring, radius: 75, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 8, e.monster.genome.token.toUpperCase() + '!', '#ffffff', 13);
+        break;
+      }
+      case 'viral':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
         break;
       case 'revive':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'RISES AGAIN', '#c9b6ff', 12);

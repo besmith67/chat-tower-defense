@@ -1,5 +1,5 @@
 /** Human-readable explanations of genes, shared by the inspect panel and docs. */
-import type { Axis, Element } from './lexiconFormat';
+import type { Axis, Element, Family } from './lexiconFormat';
 import type { Genome, Quirk } from './types';
 
 export const QUIRK_INFO: Record<Quirk, { label: string; detail: string }> = {
@@ -22,6 +22,20 @@ export const QUIRK_INFO: Record<Quirk, { label: string; detail: string }> = {
   regen: { label: 'Regen', detail: 'Heals over time. From a living word.' },
   undying: { label: 'Undying', detail: 'Gets back up once. From an undead word.' },
   stealth: { label: 'Stealth', detail: 'Towers spot it late. From a hidden word.' },
+};
+
+/** Every family has a body plan and one small trait. Beasts are the plain baseline. */
+export const FAMILY_INFO: Record<Family, { label: string; trait: string }> = {
+  beast: { label: 'Beast', trait: 'A plain creature on legs. No special trait.' },
+  construct: { label: 'Construct', trait: 'Armored plating on wheels.' },
+  food: { label: 'Food', trait: 'Leaves a snack when it dies that heals nearby monsters.' },
+  person: { label: 'Person', trait: 'Sometimes dodges Needle and Flame shots.' },
+  body: { label: 'Body part', trait: 'Floats, so Frost cannot slow it.' },
+  place: { label: 'Place', trait: 'Walking terrain: tougher but slower.' },
+  elemental: { label: 'Elemental', trait: 'Pure element: weaknesses and resistances hit twice as hard. Little armor.' },
+  abstract: { label: 'Spirit', trait: 'Resists physical damage from Needle and Hammer.' },
+  sound: { label: 'Sound', trait: 'Shouts every few seconds, stunning nearby towers briefly.' },
+  meme: { label: 'Meme', trait: 'Goes viral: sometimes leaves a copy when it dies.' },
 };
 
 export const ELEMENT_INFO: Record<Element, { label: string; icon: string }> = {
@@ -55,7 +69,7 @@ export function meaningText(genome: Genome): string | null {
     .map(([axis, v]) => AXIS_WORDS[axis][v > 0 ? 1 : 0]);
   const parts: string[] = [];
   if (genome.element) parts.push(`${ELEMENT_INFO[genome.element].icon} ${ELEMENT_INFO[genome.element].label}`);
-  if (genome.family) parts.push(genome.family[0].toUpperCase() + genome.family.slice(1));
+  if (genome.family) parts.push(FAMILY_INFO[genome.family].label);
   else parts.push(m.pos === 'v' ? 'Verb' : m.pos === 'a' ? 'Adjective' : 'Word');
   if (strongest.length) parts.push(`means ${strongest.join(', ')}`);
   if (m.lemma !== genome.root) parts.push(`from "${m.lemma}"`);

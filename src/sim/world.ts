@@ -35,6 +35,7 @@ export interface Monster {
   burnDps: number;
   /** The Flame tower that set it burning, credited if the burn kills it. */
   burnBy: Tower | null;
+  nextShoutAt: number;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -66,6 +67,10 @@ export type SimEvent =
   | { type: 'shield'; monster: Monster }
   | { type: 'heal'; monster: Monster }
   | { type: 'revive'; monster: Monster }
+  | { type: 'dodge'; monster: Monster }
+  | { type: 'snack'; monster: Monster; healed: number }
+  | { type: 'shout'; monster: Monster; towers: Tower[] }
+  | { type: 'viral'; monster: Monster }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
   | { type: 'death'; monster: Monster; killer: Tower | null }
@@ -175,8 +180,10 @@ export class World {
     const { genome } = order;
     const w = genome.weights;
     const power = order.power * BALANCE.wavePower(this.wave);
-    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp));
+    const family = genome.family;
+    const maxHp = Math.max(4, power * BALANCE.hpPerPower * (0.45 + 1.65 * w.hp)) * (family === 'place' ? 1.15 : 1);
     const cyber = genome.quirks.includes('cyber') ? 0.15 : 0;
+    const plating = family === 'construct' ? 0.08 : 0;
     const pos = this.map.paths[portal].pointAt(dist);
     const monster: Monster = {
       id: this.nextId++,
@@ -188,8 +195,8 @@ export class World {
       y: pos.y,
       hp: maxHp,
       maxHp,
-      armor: Math.min(BALANCE.maxArmor, w.armor * 0.8 + cyber),
-      speed: (BALANCE.baseSpeed + BALANCE.speedRange * w.speed) / Math.pow(order.scale, BALANCE.titanSlowExponent),
+      armor: Math.min(BALANCE.maxArmor, (w.armor * 0.8 + cyber + plating) * (family === 'elemental' ? 0.5 : 1)),
+      speed: ((BALANCE.baseSpeed + BALANCE.speedRange * w.speed) / Math.pow(order.scale, BALANCE.titanSlowExponent)) * (family === 'place' ? 0.9 : 1),
       radius: genome.look.radius * order.scale,
       age: 0,
       slowUntil: 0,
@@ -202,6 +209,7 @@ export class World {
       burnUntil: 0,
       burnDps: 0,
       burnBy: null,
+      nextShoutAt: this.time + 2 + (genome.look.phase % 2),
       bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
@@ -232,6 +240,13 @@ export class World {
         m.dist += 70;
         m.nextBlinkAt = this.time + 4;
         this.events.push({ type: 'blink', monster: m });
+      }
+
+      if (m.genome.family === 'sound' && this.time >= m.nextShoutAt) {
+        m.nextShoutAt = this.time + 5;
+        const stunned = this.towers.filter((t) => Math.hypot(t.x - m.x, t.y - m.y) < 75);
+        for (const t of stunned) t.stunnedUntil = Math.max(t.stunnedUntil, this.time + 0.5);
+        this.events.push({ type: 'shout', monster: m, towers: stunned });
       }
 
       const path = this.map.paths[m.portal];
@@ -275,8 +290,8 @@ export class World {
         tower.cooldownLeft = tower.def.cooldown;
         this.events.push({ type: 'pulse', tower });
         for (const m of targets) {
-          // Frost monsters shrug off half the chill.
-          m.slowFactor = (tower.def.slow ?? 0) * (m.genome.element === 'frost' ? 0.5 : 1);
+          // Frost monsters shrug off half the chill. Floating body parts ignore it.
+          m.slowFactor = m.genome.family === 'body' ? 0 : (tower.def.slow ?? 0) * (m.genome.element === 'frost' ? 0.5 : 1);
           m.slowUntil = this.time + (tower.def.slowSeconds ?? 1);
           this.damage(tower, m);
         }
@@ -358,7 +373,16 @@ export class World {
       return;
     }
 
-    const matchup = formMultiplier(tower.def.kind, m.genome.formClass) * elementMultiplier(tower.def.kind, m.genome.element);
+    const family = m.genome.family;
+    const kind = tower.def.kind;
+    if (family === 'person' && (kind === 'pierce' || kind === 'fire') && this.chance(m, 0.15)) {
+      this.events.push({ type: 'dodge', monster: m });
+      return;
+    }
+    let element = elementMultiplier(kind, m.genome.element);
+    if (family === 'elemental') element *= element;
+    const physical = family === 'abstract' && (kind === 'pierce' || kind === 'blunt') ? 0.8 : 1;
+    const matchup = formMultiplier(kind, m.genome.formClass) * element * physical;
     const armor = m.armor * armorFactor(tower.def.kind);
     const amount = tower.def.damage * scale * matchup * (1 - armor) * this.adaptation(tower, m.genome);
     m.hp -= amount;
@@ -407,6 +431,23 @@ export class World {
         nearest.stunnedUntil = this.time + 1.2;
         this.events.push({ type: 'stun', tower: nearest });
       }
+    }
+
+    if (m.genome.family === 'food') {
+      let healed = 0;
+      for (const other of this.monsters) {
+        if (!other.alive || other === m || Math.hypot(other.x - m.x, other.y - m.y) > 80) continue;
+        other.hp = Math.min(other.maxHp, other.hp + other.maxHp * 0.15);
+        healed++;
+      }
+      this.events.push({ type: 'snack', monster: m, healed });
+    }
+
+    if (m.genome.family === 'meme' && m.order.cost > 0 && this.chance(m, 0.3)) {
+      const copy: Genome = { ...m.genome, family: null, look: { ...m.genome.look, radius: m.genome.look.radius * 0.7 } };
+      const child = this.spawn({ ...m.order, genome: copy, power: m.order.power * 0.3, cost: 0 }, m.portal, Math.max(0, m.dist - 10));
+      child.bounty = 1;
+      this.events.push({ type: 'viral', monster: child });
     }
 
     if (q.includes('splitter')) {

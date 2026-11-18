@@ -84,11 +84,12 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** The balance bot plays with five towers, and a strategy that ignores elements does measurably worse than one that reads them.
 - **Result.** Matchups are 1.4x weak and 0.7x resist; 0.5x made resisted monsters slip through. About 60 percent of Wilds now carry an element. Tuned: Flame 5 damage plus 10 burn per second, Tesla 16 damage every 0.9s with 0.8 chain falloff, Frost damage 3 to 7 so Fire has a real counter. Balance bot strategies are now smart (fills damage slots with the best element counter to the chat queue), blind (fixed rotation), worst (control), needles, and lazy. Busy chat, 30 runs: smart 30/30 with 12.5 lives left, blind 26/30 with 9.9, worst 9/30. Offline, smart and blind 20/20 with 18.4 lives. The offline game is easy for a full-coverage bot; real players misplace towers, so leave it until U4 playtest feedback.
 
-### M2.5 Layer 4: families and body plans: todo
+### M2.5 Layer 4: families and body plans: done
 
 - **Depends on.** M2.1.
 - **Goal.** Each family gets a body plan in `monsterArt.ts` (legs, wheels, wisp, floating part, and so on) and one small signature trait in the sim (for example, food leaves a snack that heals neighbors; constructs are armored).
 - **Done when.** Ten families are visually distinct in the playtest screenshots and each trait has a test.
+- **Result.** Body plans and traits listed in MONSTER_GENERATION.md, Layer 4. New art review tool: `npx tsx tools/gallery.ts out.png word word ...` renders monsters large (needs the preview server). Busy chat, 20 runs: smart 17/20 with 10.5 lives, blind 16/20, worst 3/20. The art is serviceable, not final; M5.6 should revisit legs and person arms.
 
 ### M2.6 Layer 5: verbs become abilities, adjectives become auras: todo
 

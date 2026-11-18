@@ -141,7 +141,9 @@ Tokens outside the vocabulary skip this layer and rely on form, typos, and affix
 
 ## Layer 4: Category
 
-The kind of thing a word names sets its family and body plan.
+The kind of thing a word names sets its family and body plan. Shipped: families come from the WordNet lexicographer file of a noun's main sense, or from the seed file. Only words used mainly as nouns get a family; verbs and adjectives are handled by Layer 5. Body plans add parts around the shape (legs, wheels, a halo) and never change the spiky or round outline.
+
+Shipped traits are deliberately small: beast none, construct +armor and wheels, food heals neighbors 15 percent on death, person dodges 15 percent of Needle and Flame shots, body part floats and ignores Frost slows, place has 15 percent more health and 10 percent less speed, elemental squares its element multipliers and halves armor, spirit (abstract) takes 0.8x from Needle and Hammer, sound shouts every 5 seconds to stun towers within 75 px for half a second, and meme has a 30 percent chance to leave a smaller copy on death. Weather is renamed Elemental and Abstract shows as Spirit on screen.
 
 | Family | Example words | Body plan | Signature trait |
 |---|---|---|---|
@@ -309,7 +311,7 @@ The full system is too much for one step. Ship it in phases.
 | Phase | Contents | Status |
 |---|---|---|
 | 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
-| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon and Layer 3 shipped |
+| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon, Layer 3, and Layer 4 shipped |
 | 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
 | 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
 

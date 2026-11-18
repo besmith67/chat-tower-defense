@@ -1,8 +1,9 @@
 /**
  * Sticker-style monster textures, drawn procedurally from the genome and cached per species.
  * Spiky words get star outlines, round words get soft blobs, syllables add tail segments,
- * vowels add eyes, consonant clusters add horns. Chat monsters get a white sticker border,
- * elites a gold one, and Wilds monsters a glitchy magenta and cyan edge.
+ * vowels add eyes, consonant clusters add horns. A word's family adds a body plan around that shape
+ * (legs, wheels, a halo, frosting) without changing the outline, so the shape counter stays readable.
+ * Chat monsters get a white sticker border, elites a gold one, and Wilds monsters a glitchy magenta and cyan edge.
  */
 import Phaser from 'phaser';
 import type { Genome } from '../genome';
@@ -25,10 +26,12 @@ export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterText
   const R = L.radius;
   const segR = R * 0.62;
   const tail = L.segments * segR * 1.05;
-  const pad = 8;
-  const hornRoom = L.horns ? R * 0.55 : 0;
+  const family = genome.family;
+  const pad = 8 + (family ? R * 0.35 : 0);
+  const hornRoom = Math.max(L.horns ? R * 0.55 : 0, family === 'abstract' || family === 'elemental' ? R * 0.5 : 0);
+  const footRoom = family ? R * 0.45 : 0;
   const w = Math.ceil(R * 2 + tail + pad * 2 + 6);
-  const h = Math.ceil(R * 2 + pad * 2 + hornRoom + 6);
+  const h = Math.ceil(R * 2 + pad * 2 + hornRoom + footRoom + 6);
   const cx = pad + tail + R + 3;
   const cy = pad + hornRoom + R + 3;
 
@@ -41,9 +44,14 @@ export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterText
 
   const g = scene.make.graphics({}, false);
 
-  // Ground shadow.
-  g.fillStyle(0x000000, 0.28);
-  g.fillEllipse(cx - tail / 2, cy + R * 0.92, R * 1.8 + tail, R * 0.45);
+  // Ground shadow. Floating families cast a smaller shadow further down.
+  const floats = family === 'body' || family === 'elemental' || family === 'abstract';
+  g.fillStyle(0x000000, floats ? 0.18 : 0.28);
+  if (floats) g.fillEllipse(cx - tail / 2, cy + R * 1.3, R * 1.2 + tail, R * 0.3);
+  else g.fillEllipse(cx - tail / 2, cy + R * 0.92, R * 1.8 + tail, R * 0.45);
+
+  const palette = { body, dark, light, border, wild };
+  if (family) drawPlanBehind(g, genome, cx, cy, R, palette);
 
   // Tail segments, farthest first.
   for (let i = L.segments - 1; i >= 0; i--) {
@@ -100,13 +108,149 @@ export function monsterTexture(scene: Phaser.Scene, genome: Genome): MonsterText
     for (let y = cy - R; y < cy + R; y += 4) g.fillRect(cx - R, y, R * 2, 1.5);
   }
 
+  if (family) drawPlanOnBody(g, genome, cx, cy, R, palette);
   if (!genome.emote) drawFace(g, genome, cx, cy, R);
+  if (family === 'meme' && !genome.emote) drawShades(g, genome, cx, cy, R);
 
   g.generateTexture(key, w, h);
   g.destroy();
   const tex = { key, originX: cx / w, originY: cy / h };
   cache.set(key, tex);
   return tex;
+}
+
+interface Palette {
+  body: number;
+  dark: number;
+  light: number;
+  border: number;
+  wild: boolean;
+}
+
+/** Family parts that sit behind the body: legs, wheels, terrain, wisps, sound arcs. */
+function drawPlanBehind(g: Phaser.GameObjects.Graphics, genome: Genome, cx: number, cy: number, R: number, p: Palette): void {
+  const base = cy + R * 0.78;
+  const legTop = cy + R * 0.55;
+  switch (genome.family) {
+    case 'beast':
+      for (const dx of [-0.6, -0.22, 0.22, 0.6]) {
+        g.fillStyle(p.border, 1);
+        g.fillRoundedRect(cx + dx * R - R * 0.15 - 2.5, legTop - 2.5, R * 0.3 + 5, R * 0.62 + 5, 5);
+        g.fillStyle(p.dark, 1);
+        g.fillRoundedRect(cx + dx * R - R * 0.15, legTop, R * 0.3, R * 0.62, 4);
+      }
+      break;
+    case 'person':
+      for (const dx of [-0.3, 0.3]) {
+        g.fillStyle(p.border, 1);
+        g.fillRoundedRect(cx + dx * R - R * 0.13 - 2.5, legTop - 2.5, R * 0.26 + 5, R * 0.72 + 5, 5);
+        g.fillStyle(p.dark, 1);
+        g.fillRoundedRect(cx + dx * R - R * 0.13, legTop, R * 0.26, R * 0.72, 4);
+      }
+      for (const side of [-1, 1]) {
+        g.lineStyle(R * 0.2 + 3, p.border, 1);
+        g.lineBetween(cx + side * R * 0.8, cy, cx + side * R * 1.2, cy + R * 0.35);
+        g.lineStyle(R * 0.2, p.dark, 1);
+        g.lineBetween(cx + side * R * 0.8, cy, cx + side * R * 1.2, cy + R * 0.35);
+      }
+      break;
+    case 'construct':
+      for (const dx of [-0.5, 0.5]) {
+        g.fillStyle(p.border, 1);
+        g.fillCircle(cx + dx * R, base + R * 0.08, R * 0.3 + 2.5);
+        g.fillStyle(COLORS.ink, 1);
+        g.fillCircle(cx + dx * R, base + R * 0.08, R * 0.3);
+        g.fillStyle(0x9a9ab0, 1);
+        g.fillCircle(cx + dx * R, base + R * 0.08, R * 0.12);
+      }
+      break;
+    case 'place':
+      g.fillStyle(p.border, 1);
+      g.fillRoundedRect(cx - R * 1.1 - 2, base - R * 0.1 - 2, R * 2.2 + 4, R * 0.42 + 4, 6);
+      g.fillStyle(0x6b5a4a, 1);
+      g.fillRoundedRect(cx - R * 1.1, base - R * 0.1, R * 2.2, R * 0.42, 5);
+      g.fillStyle(0x5aa05a, 1);
+      g.fillRect(cx - R * 1.1, base - R * 0.1, R * 2.2, R * 0.1);
+      break;
+    case 'elemental':
+      for (let i = 0; i < 3; i++) {
+        const fx = cx + (i - 1) * R * 0.5;
+        g.fillStyle(p.light, 0.85);
+        g.fillTriangle(fx - R * 0.28, cy - R * 0.4, fx + R * 0.28, cy - R * 0.4, fx + (i - 1) * R * 0.2, cy - R * (1.45 + (i % 2) * 0.25));
+      }
+      break;
+    case 'sound':
+      g.lineStyle(3, 0xffffff, 0.85);
+      for (const side of [-1, 1]) {
+        for (let k = 0; k < 2; k++) {
+          g.beginPath();
+          const r = R * (1.12 + k * 0.22);
+          const start = side > 0 ? -0.45 : Math.PI - 0.45;
+          g.arc(cx, cy, r, start, start + 0.9, false);
+          g.strokePath();
+        }
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/** Family details drawn on top of the body, under the face. */
+function drawPlanOnBody(g: Phaser.GameObjects.Graphics, genome: Genome, cx: number, cy: number, R: number, p: Palette): void {
+  switch (genome.family) {
+    case 'construct':
+      g.fillStyle(p.dark, 0.9);
+      g.fillRect(cx - R * 0.75, cy + R * 0.12, R * 1.5, R * 0.16);
+      g.fillStyle(0xd8d8e8, 1);
+      for (const dx of [-0.55, -0.18, 0.18, 0.55]) g.fillCircle(cx + dx * R, cy + R * 0.2, Math.max(1.5, R * 0.05));
+      break;
+    case 'food': {
+      g.fillStyle(0xfff3f8, 0.95);
+      g.fillEllipse(cx - R * 0.05, cy - R * 0.62, R * 1.3, R * 0.42);
+      for (const dx of [-0.45, 0, 0.42]) g.fillCircle(cx + dx * R, cy - R * 0.45 + Math.abs(dx) * R * 0.2, R * 0.12);
+      const sprinkles = [0xff5c7a, 0x4cc9f0, 0xffd166, 0x7cff9b];
+      sprinkles.forEach((c, i) => {
+        g.fillStyle(c, 1);
+        g.fillRect(cx - R * 0.45 + i * R * 0.28, cy - R * (0.72 - (i % 2) * 0.1), Math.max(2, R * 0.12), Math.max(1.5, R * 0.05));
+      });
+      break;
+    }
+    case 'place':
+      g.fillStyle(0x5aa05a, 1);
+      g.fillTriangle(cx - R * 0.35, cy - R * 0.7, cx - R * 0.15, cy - R * 0.7, cx - R * 0.25, cy - R * 1.05);
+      g.fillTriangle(cx + R * 0.1, cy - R * 0.75, cx + R * 0.32, cy - R * 0.75, cx + R * 0.21, cy - R * 1.15);
+      break;
+    case 'abstract':
+      g.lineStyle(3, COLORS.elite, 0.9);
+      g.strokeEllipse(cx, cy - R * 1.12, R * 1.1, R * 0.3);
+      break;
+    case 'body':
+      g.lineStyle(1.5, p.dark, 0.7);
+      g.beginPath();
+      g.arc(cx - R * 0.4, cy + R * 0.3, R * 0.3, 0.2, 2.2, false);
+      g.strokePath();
+      break;
+    default:
+      break;
+  }
+}
+
+/** Meme family: deal-with-it shades. */
+function drawShades(g: Phaser.GameObjects.Graphics, genome: Genome, cx: number, cy: number, R: number): void {
+  const n = Math.min(genome.look.eyes, 2);
+  const ey = cy - R * 0.14;
+  const lensW = R * 0.42;
+  const lensH = R * 0.26;
+  g.fillStyle(COLORS.ink, 1);
+  g.fillRect(cx - R * 0.55, ey - lensH * 0.15, R * 1.2, Math.max(2, R * 0.06));
+  for (let i = 0; i < n; i++) {
+    const lx = cx - R * 0.42 + i * R * 0.55;
+    g.fillRect(lx, ey - lensH / 2, lensW, lensH);
+    g.fillStyle(0xffffff, 0.5);
+    g.fillRect(lx + lensW * 0.15, ey - lensH * 0.35, lensW * 0.2, lensH * 0.2);
+    g.fillStyle(COLORS.ink, 1);
+  }
 }
 
 function outlineCircle(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, wild: boolean, border: number): void {

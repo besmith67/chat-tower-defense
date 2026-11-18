@@ -115,3 +115,52 @@ describe('meaning quirks in the sim', () => {
     expect(titan.speed).toBeLessThan(single.speed);
   });
 });
+
+describe('family traits', () => {
+  function events(world: World, seconds: number): string[] {
+    const out: string[] = [];
+    for (let t = 0; t < seconds; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) out.push(e.type);
+    }
+    return out;
+  }
+
+  it('reads families from the lexicon', () => {
+    expect(makeGenome('truck')!.family).toBe('construct');
+    expect(makeGenome('pizza')!.family).toBe('food');
+    expect(makeGenome('boom')!.family).toBe('sound');
+    expect(makeGenome('pog')!.family).toBe('meme');
+  });
+
+  it('plates constructs with extra armor', () => {
+    const world = new World(0, 20);
+    const truck = world.spawn(order('truck'), 'chat', 0);
+    const plain = { ...order('truck'), genome: { ...makeGenome('truck')!, family: null } };
+    expect(truck.armor).toBeGreaterThan(world.spawn(plain, 'chat', 0).armor);
+  });
+
+  it('heals neighbors when food dies', () => {
+    const world = new World(1000, 20);
+    world.placeTower('hammer', 2, 3);
+    const friend = world.spawn(order('snail', 5), 'chat', 50);
+    friend.hp = friend.maxHp / 2;
+    world.spawn(order('pizza', 0.1), 'chat', 55);
+    expect(events(world, 2)).toContain('snack');
+  });
+
+  it('lets floating body parts ignore Frost slows', () => {
+    const world = new World(1000, 20);
+    world.placeTower('frost', 2, 3);
+    const eye = world.spawn(order('eye', 5), 'chat', 60);
+    events(world, 2);
+    expect(eye.slowFactor).toBe(0);
+  });
+
+  it('makes sound monsters shout and stun nearby towers', () => {
+    const world = new World(1000, 20);
+    world.placeTower('needle', 2, 3);
+    world.spawn(order('boom', 20), 'chat', 60);
+    expect(events(world, 5)).toContain('shout');
+  });
+});
