@@ -114,7 +114,7 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 
 ---
 
-## Milestone 3: Emotes go deep
+## Milestone 3: Emotes go deep (done except M3.6, in PR #3)
 
 Branch: `milestone-3-emotes`.
 
