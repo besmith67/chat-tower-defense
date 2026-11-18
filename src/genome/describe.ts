@@ -5,7 +5,7 @@ import type { Genome, Quirk } from './types';
 export const QUIRK_INFO: Record<Quirk, { label: string; detail: string }> = {
   enraged: { label: 'Enraged', detail: 'Faster as it loses health. From ALL CAPS or a hostile word.' },
   mocking: { label: 'Mocking', detail: 'Towers must shoot it first. From aLtErNaTiNg case or a loud word.' },
-  charge: { label: 'Charge', detail: 'Bursts of speed. From a trailing "!".' },
+  charge: { label: 'Charge', detail: 'Bursts of speed. From a trailing "!" or a running verb.' },
   confused: { label: 'Confused', detail: 'Erratic speed. From a trailing "?" or a chaotic word.' },
   drowsy: { label: 'Drowsy', detail: 'Slow, but towers spot it late. From "...".' },
   mirror: { label: 'Mirror', detail: 'Reflects some hits. From a palindrome.' },
@@ -22,6 +22,11 @@ export const QUIRK_INFO: Record<Quirk, { label: string; detail: string }> = {
   regen: { label: 'Regen', detail: 'Heals over time. From a living word.' },
   undying: { label: 'Undying', detail: 'Gets back up once. From an undead word.' },
   stealth: { label: 'Stealth', detail: 'Towers spot it late. From a hidden word.' },
+  hop: { label: 'Hop', detail: 'Leaps ahead every few seconds. From a jumping verb.' },
+  burrow: { label: 'Burrow', detail: 'Dives underground, untargetable for a moment. From a digging verb.' },
+  healer: { label: 'Healer', detail: 'Heals monsters around it. From a healing verb.' },
+  thief: { label: 'Thief', detail: 'Steals gold if it reaches the base. From a stealing verb.' },
+  herald: { label: 'Herald', detail: 'Aura that passes its meaning to monsters around it. From an adjective.' },
 };
 
 /** Every family has a body plan and one small trait. Beasts are the plain baseline. */

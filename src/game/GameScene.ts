@@ -722,6 +722,12 @@ export class GameScene extends Phaser.Scene {
       case 'viral':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'went viral', '#ff8fd1', 11);
         break;
+      case 'hop':
+        this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'hop', '#ffffff', 11);
+        break;
+      case 'steal':
+        this.floatText(sx(this.match.world.map.base.x), sy(this.match.world.map.base.y) - 52, `-${e.amount} ◆ stolen`, COLORS.gold, 15);
+        break;
       case 'revive':
         this.floatText(sx(e.monster.x), sy(e.monster.y) - e.monster.radius - 6, 'RISES AGAIN', '#c9b6ff', 12);
         break;
@@ -872,6 +878,14 @@ export class GameScene extends Phaser.Scene {
       .setVisible(!wild);
     const hpBg = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x000000, 0.7).setOrigin(0, 0.5).setVisible(false);
     const hpFill = this.add.rectangle(-16, -m.radius - 7, 32, 4, 0x7cff9b).setOrigin(0, 0.5).setVisible(false);
+    // Heralds and healers show their aura so the streamer can see why neighbors got tougher.
+    if (g.quirks.includes('herald') || g.quirks.includes('healer')) {
+      const color = g.quirks.includes('healer') ? 0x7cff9b : 0xffd166;
+      const radius = g.quirks.includes('healer') ? 70 : 90;
+      const aura = this.add.circle(0, 0, radius, color, 0.06).setStrokeStyle(1.5, color, 0.45);
+      root.add(aura);
+      this.tweens.add({ targets: aura, alpha: 0.4, duration: 700, yoyo: true, repeat: -1 });
+    }
     root.add([bodyRoot, hpBg, hpFill, label]);
 
     let shield: Phaser.GameObjects.Arc | null = null;
@@ -914,7 +928,9 @@ export class GameScene extends Phaser.Scene {
       else if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
       else if (m.genome.quirks.includes('enraged') && m.hp < m.maxHp * 0.6) v.sprite.setTint(0xff9a9a);
       else v.sprite.clearTint();
-      v.root.setAlpha(m.genome.quirks.includes('stealth') ? 0.45 : m.genome.quirks.includes('drowsy') ? 0.7 : 1);
+      const burrowed = w.isBurrowed(m);
+      v.bodyRoot.scaleY = m.order.scale * (burrowed ? 0.35 : 1);
+      v.root.setAlpha(burrowed ? 0.3 : m.genome.quirks.includes('stealth') ? 0.45 : m.genome.quirks.includes('drowsy') ? 0.7 : 1);
 
       if (m.hp < m.maxHp) {
         const frac = Math.max(0, m.hp / m.maxHp);

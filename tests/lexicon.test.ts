@@ -6,7 +6,13 @@ describe('lexicon format', () => {
   it('round-trips an entry', () => {
     const axes = { ...neutralAxes(), speed: -2, hardness: 3 };
     const decoded = decodeEntry(encodeEntry(['n', 'v'], 'beast', 'venom', 3, axes));
-    expect(decoded).toEqual({ pos: ['n', 'v'], family: 'beast', element: 'venom', zipf: 3, axes });
+    expect(decoded).toEqual({ pos: ['n', 'v'], family: 'beast', element: 'venom', zipf: 3, axes, ability: null });
+  });
+
+  it('round-trips an ability, even with neutral axes', () => {
+    const decoded = decodeEntry(encodeEntry(['v'], null, null, 4, neutralAxes(), 'burrow'));
+    expect(decoded.ability).toBe('burrow');
+    expect(decoded.axes).toEqual(neutralAxes());
   });
 
   it('omits neutral axes', () => {

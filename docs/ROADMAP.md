@@ -91,12 +91,13 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** Ten families are visually distinct in the playtest screenshots and each trait has a test.
 - **Result.** Body plans and traits listed in MONSTER_GENERATION.md, Layer 4. New art review tool: `npx tsx tools/gallery.ts out.png word word ...` renders monsters large (needs the preview server). Busy chat, 20 runs: smart 17/20 with 10.5 lives, blind 16/20, worst 3/20. The art is serviceable, not final; M5.6 should revisit legs and person arms.
 
-### M2.6 Layer 5: verbs become abilities, adjectives become auras: todo
+### M2.6 Layer 5: verbs become abilities, adjectives become auras: done
 
 - **Depends on.** M2.1.
 - **Goal.** A verb maps to the nearest ability in a catalog. Start with eight: sprint, hop, burrow, stealth, heal, split, steal, explode. A lone adjective spawns a herald that buffs the next few monsters.
 - **Build.** Ability catalog in `src/sim/abilities.ts`, verb-to-ability mapping at lexicon build time.
 - **Done when.** `dig` burrows, `heal` heals, `angry` makes a herald, and each ability has a test.
+- **Result.** Abilities are quirks, so there is no separate `abilities.ts`; the verb-to-ability map is built into the lexicon. Heralds are a visible aura rather than buffing the next few monsters. Busy chat got harder, so burrow, healer, and herald were trimmed and chat bounty went from 1.3x to 1.5x. Busy chat, 20 runs: smart 16/20 with 9.6 lives, blind 13/20, worst 3/20. Offline unchanged at 20/20.
 
 ### M2.7 Typo mutants and affixes: todo
 

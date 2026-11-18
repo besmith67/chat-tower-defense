@@ -7,7 +7,7 @@ import { CURATED_EMOTES, CURATED_NUMBERS, type Archetype } from './curated';
 import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
 import { lookupWord } from './lexicon';
-import { ELEMENTS, type Element } from './lexiconFormat';
+import { ELEMENTS, type Ability, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
 import { isBlocked } from './safety';
 import type { EmoteRef, FormClass, Genome, Look, Meaning, MonsterSource, Quirk, StatWeights } from './types';
@@ -40,8 +40,9 @@ export function makeGenome(token: string, options: GenomeOptions = {}): Genome |
   // Layer 3. Wilds names are invented, and curated archetypes and numbers have their own design.
   const word = source === 'chat' && !archetype && norm.number === null ? lookupWord(norm.root, norm.letters) : null;
   const meaning: Meaning | null = word
-    ? { lemma: word.lemma, pos: word.pos[0], axes: word.axes, rare: word.zipf <= 2 && word.lemma.length >= 5 }
+    ? { lemma: word.lemma, pos: word.pos[0], axes: word.axes, rare: word.zipf <= 2 && word.lemma.length >= 5, ability: word.ability }
     : null;
+  if (meaning) addRoleQuirk(meaning, quirks);
   if (meaning) addMeaningQuirks(meaning, quirks);
 
   let swarm = form.swarm;
@@ -119,6 +120,18 @@ function surfaceQuirks(norm: NormalizedToken, form: FormGenes): Quirk[] {
 /** Readability cap: surface quirks come first because chat chose them on purpose. */
 const MAX_QUIRKS = 3;
 
+/** Layer 5: verbs become abilities and adjectives become heralds. Nouns are just bodies. */
+const ABILITY_QUIRK: Record<Ability, Quirk> = {
+  sprint: 'charge', hop: 'hop', burrow: 'burrow', stealth: 'stealth',
+  heal: 'healer', split: 'splitter', steal: 'thief', explode: 'stunburst',
+};
+
+function addRoleQuirk(meaning: Meaning, quirks: Quirk[]): void {
+  if (quirks.length >= MAX_QUIRKS) return;
+  if (meaning.pos === 'v' && meaning.ability) quirks.push(ABILITY_QUIRK[meaning.ability]);
+  else if (meaning.pos === 'a') quirks.push('herald');
+}
+
 /** Strong meanings become behaviors. Only the strongest two axes can add one. */
 function addMeaningQuirks(meaning: Meaning, quirks: Quirk[]): void {
   const a = meaning.axes;
@@ -179,7 +192,9 @@ function makeLook(
   rng: Rng,
 ): Look {
   const unitLength = swarm > 1 ? Math.max(1, (form.swarmUnit ?? 'x').length) : form.length;
-  const massScale = meaning ? 1 + 0.09 * meaning.axes.mass : 1;
+  // Verbs and adjectives are not things, so their bodies are small: a doer or a herald.
+  const roleScale = meaning && meaning.pos !== 'n' ? 0.85 : 1;
+  const massScale = meaning ? (1 + 0.09 * meaning.axes.mass) * roleScale : 1;
   const scale = (archetype?.scale ?? 1) * (elite ? 1.15 : 1) * (swarm > 1 ? 0.7 : 1) * massScale;
   const randomHue = Math.floor(rng() * 360);
   return {

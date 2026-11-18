@@ -65,7 +65,7 @@ A 20,000-viewer chat cannot be allowed to send 20,000 times the monsters of a 20
 - **Message merging.** Duplicate messages stack into a horde or a titan. Popularity buys power within the budget.
 - **Popular first, nothing lost.** The most-sent species spend the budget first. Species that do not fit wait for the next wave instead of vanishing, and the panel shows which ones are waiting.
 - **Per-user cap.** Each viewer contributes at most one or two monsters per spawn window.
-- **Gold follows threat.** The streamer's income scales with the threat chat spent. Chat monsters pay 30 percent more bounty than the Wilds, because chat sends cleverer monsters.
+- **Gold follows threat.** The streamer's income scales with the threat chat spent. Chat monsters pay 50 percent more bounty than the Wilds, because chat sends cleverer monsters.
 - **Titans are slow.** A merged titan's speed divides by its size, so a big spam titan is a slow tank rather than a fast leak.
 - **Chat size normalization.** Sample messages so big and small chats feel equally dangerous at the same level.
 

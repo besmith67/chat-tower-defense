@@ -1,5 +1,5 @@
 import type { FormGenes } from './form';
-import type { Axes, Element, Family, Pos } from './lexiconFormat';
+import type { Ability, Axes, Element, Family, Pos } from './lexiconFormat';
 import type { CasePattern, PunctuationMood } from './normalize';
 
 export type MonsterSource = 'chat' | 'wilds';
@@ -29,7 +29,12 @@ export type Quirk =
   | 'rhythm'    // moves in bursts on a beat
   | 'regen'     // meaning: alive. Heals over time
   | 'undying'   // meaning: undead. Gets back up once
-  | 'stealth';  // meaning: hidden. Towers spot it late
+  | 'stealth'   // meaning: hidden, or a sneaking verb. Towers spot it late
+  | 'hop'       // verb: leaps forward every few seconds
+  | 'burrow'    // verb: dives underground, untargetable for a moment
+  | 'healer'    // verb: heals monsters around it
+  | 'thief'     // verb: steals gold if it reaches the base
+  | 'herald';   // adjective: an aura that buffs monsters around it
 
 export interface StatWeights {
   hp: number;
@@ -66,6 +71,8 @@ export interface Meaning {
   axes: Axes;
   /** An uncommon word. Rare words become elites. */
   rare: boolean;
+  /** Verbs only: the ability the verb maps to. */
+  ability: Ability | null;
 }
 
 export interface Genome {

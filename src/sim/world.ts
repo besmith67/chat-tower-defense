@@ -36,6 +36,7 @@ export interface Monster {
   /** The Flame tower that set it burning, credited if the burn kills it. */
   burnBy: Tower | null;
   nextShoutAt: number;
+  nextHopAt: number;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -71,6 +72,8 @@ export type SimEvent =
   | { type: 'snack'; monster: Monster; healed: number }
   | { type: 'shout'; monster: Monster; towers: Tower[] }
   | { type: 'viral'; monster: Monster }
+  | { type: 'hop'; monster: Monster }
+  | { type: 'steal'; monster: Monster; amount: number }
   | { type: 'blink'; monster: Monster }
   | { type: 'stun'; tower: Tower }
   | { type: 'death'; monster: Monster; killer: Tower | null }
@@ -210,6 +213,7 @@ export class World {
       burnDps: 0,
       burnBy: null,
       nextShoutAt: this.time + 2 + (genome.look.phase % 2),
+      nextHopAt: this.time + 2 + (genome.look.phase % 1),
       bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
@@ -219,8 +223,21 @@ export class World {
     return monster;
   }
 
+  /** Burrowers spend 1.2 of every 5 seconds underground, where nothing can hit them. */
+  isBurrowed(m: Monster): boolean {
+    return m.genome.quirks.includes('burrow') && (m.age + m.genome.look.phase) % 5 > 3.8;
+  }
+
+  /** Heralds near this monster, other than itself. */
+  private heraldsNear(m: Monster): Monster[] {
+    return this.monsters.filter(
+      (h) => h !== m && h.alive && h.genome.quirks.includes('herald') && h.genome.meaning && Math.hypot(h.x - m.x, h.y - m.y) < 90,
+    );
+  }
+
   private moveMonsters(dt: number): void {
     const hypeSources = this.monsters.filter((m) => m.genome.quirks.includes('hype'));
+    const healers = this.monsters.filter((m) => m.alive && m.genome.quirks.includes('healer'));
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.age += dt;
@@ -234,12 +251,26 @@ export class World {
       }
       let speed = m.speed * this.speedFactor(m);
       if (hypeSources.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) speed *= 1.25;
+      for (const h of this.heraldsNear(m)) {
+        const a = h.genome.meaning!.axes;
+        speed *= 1 + 0.06 * a.speed;
+        if (a.life > 0) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.01 * a.life * dt);
+      }
+      if (healers.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) {
+        m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      }
       m.dist += speed * dt;
 
       if (m.genome.quirks.includes('blink') && this.time >= m.nextBlinkAt) {
         m.dist += 70;
         m.nextBlinkAt = this.time + 4;
         this.events.push({ type: 'blink', monster: m });
+      }
+
+      if (m.genome.quirks.includes('hop') && this.time >= m.nextHopAt) {
+        m.dist += 45;
+        m.nextHopAt = this.time + 3;
+        this.events.push({ type: 'hop', monster: m });
       }
 
       if (m.genome.family === 'sound' && this.time >= m.nextShoutAt) {
@@ -254,6 +285,11 @@ export class World {
         m.alive = false;
         this.lives = Math.max(0, this.lives - m.livesCost);
         this.events.push({ type: 'leak', monster: m });
+        if (m.genome.quirks.includes('thief')) {
+          const amount = Math.min(this.gold, 4 + 6 * m.livesCost);
+          this.gold -= amount;
+          if (amount > 0) this.events.push({ type: 'steal', monster: m, amount });
+        }
         continue;
       }
       const p = path.pointAt(m.dist);
@@ -340,6 +376,7 @@ export class World {
   }
 
   private inRange(tower: Tower, m: Monster): boolean {
+    if (this.isBurrowed(m)) return false;
     const q = m.genome.quirks;
     const range = tower.def.range * (q.includes('drowsy') ? 0.65 : 1) * (q.includes('stealth') ? BALANCE.stealthRange : 1);
     return Math.hypot(m.x - tower.x, m.y - tower.y) <= range + m.radius * 0.5;
@@ -361,7 +398,7 @@ export class World {
   }
 
   private damage(tower: Tower, m: Monster, scale = 1): void {
-    if (!m.alive) return;
+    if (!m.alive || this.isBurrowed(m)) return;
     const q = m.genome.quirks;
     if (m.shieldUp) {
       m.shieldUp = false;
@@ -384,7 +421,13 @@ export class World {
     const physical = family === 'abstract' && (kind === 'pierce' || kind === 'blunt') ? 0.8 : 1;
     const matchup = formMultiplier(kind, m.genome.formClass) * element * physical;
     const armor = m.armor * armorFactor(tower.def.kind);
-    const amount = tower.def.damage * scale * matchup * (1 - armor) * this.adaptation(tower, m.genome);
+    // Heralds that mean hard or huge toughen the monsters around them.
+    let guard = 1;
+    for (const h of this.heraldsNear(m)) {
+      const a = h.genome.meaning!.axes;
+      guard *= 1 - 0.06 * Math.max(0, a.hardness, a.mass);
+    }
+    const amount = tower.def.damage * scale * matchup * guard * (1 - armor) * this.adaptation(tower, m.genome);
     m.hp -= amount;
     const effect: Effectiveness = matchup > 1.01 ? 'strong' : matchup < 0.99 ? 'weak' : 'normal';
     if (tower.def.burnDps) {

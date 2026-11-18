@@ -164,3 +164,72 @@ describe('family traits', () => {
     expect(events(world, 5)).toContain('shout');
   });
 });
+
+describe('verbs and adjectives', () => {
+  const g = (t: string) => makeGenome(t)!;
+
+  it('turns verbs into abilities', () => {
+    expect(g('dig').quirks).toContain('burrow');
+    expect(g('heal').quirks).toContain('healer');
+    expect(g('steal').quirks).toContain('thief');
+    expect(g('jump').quirks).toContain('hop');
+    expect(g('sprint').quirks).toContain('charge');
+    expect(g('explode').quirks).toContain('stunburst');
+    expect(g('sneak').quirks).toContain('stealth');
+    expect(g('split').quirks).toContain('splitter');
+    expect(g('digging').quirks).toContain('burrow');
+  });
+
+  it('turns adjectives into heralds and keeps nouns plain', () => {
+    expect(g('angry').quirks).toContain('herald');
+    expect(g('snail').quirks).not.toContain('herald');
+  });
+
+  it('hides burrowers from towers part of the time', () => {
+    const world = new World(1000, 20);
+    world.placeTower('needle', 2, 3);
+    const mole = world.spawn(order('dig', 50), 'chat', 60);
+    let burrowedTime = 0;
+    for (let t = 0; t < 5; t += 1 / 60) {
+      world.step(1 / 60);
+      if (world.isBurrowed(mole)) burrowedTime += 1 / 60;
+    }
+    expect(burrowedTime).toBeGreaterThan(1);
+    expect(burrowedTime).toBeLessThan(2);
+  });
+
+  it('lets thieves steal gold when they leak', () => {
+    const world = new World(500, 20);
+    world.queueWave([order('steal')], 1);
+    const stolen: number[] = [];
+    for (let t = 0; t < 120 && !world.waveDone; t += 1 / 60) {
+      world.step(1 / 60);
+      for (const e of world.drainEvents()) if (e.type === 'steal') stolen.push(e.amount);
+    }
+    expect(stolen.length).toBe(1);
+    expect(world.gold).toBe(500 - stolen[0]);
+  });
+
+  it('lets a fast herald speed up its neighbors', () => {
+    const world = new World(0, 20);
+    const alone = world.spawn(order('snail'), 'chat', 0);
+    const start = alone.dist;
+    for (let t = 0; t < 1; t += 1 / 60) world.step(1 / 60);
+    const soloDistance = alone.dist - start;
+
+    const world2 = new World(0, 20);
+    const buffed = world2.spawn(order('snail'), 'chat', 0);
+    world2.spawn(order('fast', 50), 'chat', 0);
+    for (let t = 0; t < 1; t += 1 / 60) world2.step(1 / 60);
+    expect(buffed.dist).toBeGreaterThan(soloDistance);
+  });
+
+  it('heals neighbors around a healer', () => {
+    const world = new World(0, 20);
+    const hurt = world.spawn(order('snail'), 'chat', 0);
+    world.spawn(order('heal'), 'chat', 0);
+    hurt.hp = hurt.maxHp / 2;
+    for (let t = 0; t < 1; t += 1 / 60) world.step(1 / 60);
+    expect(hurt.hp).toBeGreaterThan(hurt.maxHp / 2);
+  });
+});

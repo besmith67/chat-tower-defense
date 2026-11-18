@@ -178,6 +178,21 @@ Part of speech decides what a token contributes.
 | throw, toss, defenestrate | Hurls a nearby monster forward |
 
 - **Adjectives are auras.** A lone adjective spawns a small herald that buffs the next few monsters. `angry` makes them enraged. `sleepy` slows them but makes them tougher.
+
+**Shipped version of Layer 5.** About 120 verbs map to eight abilities, from seed verbs in `tools/lexicon/build.ts` plus their WordNet synonyms and close links. Each ability is a sim quirk:
+
+| Ability | Seed verbs (examples) | Quirk |
+|---|---|---|
+| Sprint | run, dash, rush, flee, zoom | Charge: bursts of speed |
+| Hop | jump, leap, bounce, yeet | Hop: leaps 45 px every 3 seconds |
+| Burrow | dig, tunnel, drill | Burrow: untargetable 1.2 of every 5 seconds |
+| Stealth | hide, sneak, lurk | Stealth: towers see it at 80 percent range |
+| Heal | heal, mend, fix, repair | Healer: neighbors within 70 px heal 3 percent per second |
+| Split | split, clone, multiply | Splitter: three minis on death |
+| Steal | steal, rob, yoink, loot | Thief: takes gold when it leaks |
+| Explode | explode, burst, blast | Stunburst: stuns the nearest tower on death |
+
+A lone adjective becomes a herald with a 90 px aura instead of the "next few monsters" idea, because an aura is visible on stream. The aura passes on the adjective's meaning: speed changes neighbors' speed by 6 percent per point, hardness or mass cuts their damage taken by 6 percent per point, and life heals them 1 percent per point per second. Verbs and adjectives get small bodies. Grammar combos such as `angry snail dig` are still planned.
 - **Grammar combos.** A message can hold up to one adjective, one noun, and one verb, such as `angry snail dig`. It costs more budget than a single word, so single words still matter. This turns chat into a crafting language.
 
 ## Layer 6: Emotes
@@ -311,7 +326,7 @@ The full system is too much for one step. Ship it in phases.
 | Phase | Contents | Status |
 |---|---|---|
 | 1 | Identity, form, curated emotes, burst merging, emote images as faces | Done |
-| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon, Layer 3, and Layer 4 shipped |
+| 2 | The meaning data, categories, and verbs as abilities | In progress: lexicon and Layers 3 to 5 shipped |
 | 3 | Emote image analysis, the Emote Studio, and grammar combos | Planned |
 | 4 | Rhymes, antonyms, sabotage, evolution, and the bestiary | Planned |
 

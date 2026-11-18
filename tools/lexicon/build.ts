@@ -17,7 +17,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
   AXES, AXIS_CODES, ELEMENTS, FAMILIES, encodeEntry, neutralAxes,
-  type Axes, type Element, type Family, type Pos,
+  type Ability, type Axes, type Element, type Family, type Pos,
 } from '../../src/genome/lexiconFormat';
 
 const require = createRequire(import.meta.url);
@@ -210,6 +210,46 @@ const ELEMENT_ANCHORS: [Element, RegExp][] = [
   ['spirit', /\b(ghost|spirit|soul|supernatural|magic|magical|deity|demon|angel|holy)\b/],
 ];
 
+// ---------- Abilities ----------
+
+/** Seed verbs per ability. Other verbs inherit through synonyms and close WordNet links. */
+const ABILITY_SEEDS: Record<Ability, string[]> = {
+  sprint: ['run', 'sprint', 'dash', 'rush', 'race', 'hurry', 'flee', 'charge', 'zoom', 'speed', 'bolt', 'zip'],
+  hop: ['jump', 'hop', 'leap', 'bounce', 'skip', 'vault', 'spring', 'yeet', 'fly'],
+  burrow: ['dig', 'burrow', 'tunnel', 'drill', 'bury', 'excavate'],
+  stealth: ['hide', 'sneak', 'lurk', 'creep', 'stalk', 'vanish', 'disappear', 'camouflage'],
+  heal: ['heal', 'mend', 'fix', 'cure', 'repair', 'regenerate', 'restore', 'nurse'],
+  split: ['split', 'divide', 'clone', 'multiply', 'duplicate', 'breed', 'replicate', 'copy'],
+  steal: ['steal', 'rob', 'yoink', 'grab', 'loot', 'snatch', 'pickpocket', 'plunder', 'take'],
+  explode: ['explode', 'burst', 'detonate', 'erupt', 'shatter', 'blast', 'blow', 'pop'],
+};
+
+const abilitySynsets = new Map<string, Ability>();
+for (const [ability, verbs] of Object.entries(ABILITY_SEEDS) as [Ability, string[]][]) {
+  for (const verb of verbs) {
+    const key = lemmas.get(verb)?.top.v?.key;
+    if (key && !abilitySynsets.has(key)) abilitySynsets.set(key, ability);
+  }
+}
+const seedAbility = new Map<string, Ability>();
+for (const [ability, verbs] of Object.entries(ABILITY_SEEDS) as [Ability, string[]][]) for (const v of verbs) seedAbility.set(v, ability);
+
+/** A verb's ability: its own seed, its main synset, or a hypernym or derivation one step away. */
+function abilityOf(word: string, info: LemmaInfo | undefined): Ability | null {
+  const own = seedAbility.get(word);
+  if (own) return own;
+  const key = info?.top.v?.key;
+  if (!key) return null;
+  const direct = abilitySynsets.get(key);
+  if (direct) return direct;
+  for (const ptr of synsets.get(key)?.pointers ?? []) {
+    if (ptr.sym !== '@' && ptr.sym !== '+') continue;
+    const hit = abilitySynsets.get(ptr.key);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 // ---------- Families ----------
 
 const NOUN_FAMILY: Record<number, Family> = {
@@ -220,7 +260,7 @@ const NOUN_FAMILY: Record<number, Family> = {
 // ---------- Build ----------
 
 const words: Record<string, string> = {};
-const stats = { total: 0, seeded: 0, inherited: 0, glossOnly: 0, families: {} as Record<string, number>, elements: {} as Record<string, number> };
+const stats = { total: 0, seeded: 0, inherited: 0, glossOnly: 0, families: {} as Record<string, number>, elements: {} as Record<string, number>, abilities: {} as Record<string, number> };
 
 const candidates = new Set<string>(seeds.keys());
 for (const lemma of lemmas.keys()) if ((counts.get(lemma) ?? 0) >= MIN_COUNT) candidates.add(lemma);
@@ -269,7 +309,9 @@ for (const word of [...candidates].sort()) {
 
   // Chat slang is missing from the subtitle counts but is common in chat, so seeds are never rare.
   const zipf = seed ? Math.max(zipfOf(word), 4) : zipfOf(word);
-  words[word] = encodeEntry(pos, family, element, zipf, axes);
+  const ability = pos[0] === 'v' ? abilityOf(word, info) : null;
+  if (ability) stats.abilities[ability] = (stats.abilities[ability] ?? 0) + 1;
+  words[word] = encodeEntry(pos, family, element, zipf, axes, ability);
   stats.total++;
   if (family) stats.families[family] = (stats.families[family] ?? 0) + 1;
   if (element) stats.elements[element] = (stats.elements[element] ?? 0) + 1;
@@ -285,3 +327,4 @@ console.log(`Wrote ${OUT}: ${stats.total} words, ${(json.length / 1024).toFixed(
 console.log(`  seeded ${stats.seeded}, inherited ${stats.inherited}, gloss only ${stats.glossOnly}`);
 console.log('  families', stats.families);
 console.log('  elements', stats.elements);
+console.log('  abilities', stats.abilities);

@@ -13,6 +13,13 @@ export type Family = (typeof FAMILIES)[number];
 export const ELEMENTS = ['fire', 'frost', 'storm', 'venom', 'stone', 'spirit'] as const;
 export type Element = (typeof ELEMENTS)[number];
 
+/** Verbs map to one of these abilities (Layer 5). The sim implements each as a quirk. */
+export const ABILITIES = ['sprint', 'hop', 'burrow', 'stealth', 'heal', 'split', 'steal', 'explode'] as const;
+export type Ability = (typeof ABILITIES)[number];
+export const ABILITY_CODE: Record<Ability, string> = {
+  sprint: 's', hop: 'h', burrow: 'b', stealth: 'k', heal: 'e', split: 'p', steal: 'r', explode: 'x',
+};
+
 /** Eight semantic axes, each an integer from -3 to +3. See docs/MONSTER_GENERATION.md, Layer 3. */
 export const AXES = ['speed', 'mass', 'hardness', 'heat', 'life', 'mood', 'order', 'presence'] as const;
 export type Axis = (typeof AXES)[number];
@@ -36,18 +43,23 @@ export function neutralAxes(): Axes {
 
 /**
  * One entry is a short string: parts of speech (dominant first), family code or "-", element code or "-",
- * a frequency digit, and optionally eight axis digits where 3 means neutral.
- * Example: "nv.b.-.3.15533323".
+ * a frequency digit, then optionally eight axis digits (3 means neutral; empty when all neutral) and an
+ * ability code. Examples: "nv.b.-.3.15533323", "vn.-.r.5.23433331.b".
  */
-export function encodeEntry(pos: Pos[], family: Family | null, element: Element | null, zipf: number, axes: Axes): string {
+export function encodeEntry(
+  pos: Pos[], family: Family | null, element: Element | null, zipf: number, axes: Axes, ability: Ability | null = null,
+): string {
   const parts = [pos.join(''), family ? FAMILY_CODE[family] : '-', element ? ELEMENT_CODE[element] : '-', String(zipf)];
   const digits = AXES.map((a) => String(Math.max(-3, Math.min(3, Math.round(axes[a]))) + 3)).join('');
-  if (digits !== '33333333') parts.push(digits);
+  const neutral = digits === '33333333';
+  if (!neutral || ability) parts.push(neutral ? '' : digits);
+  if (ability) parts.push(ABILITY_CODE[ability]);
   return parts.join('.');
 }
 
 const FAMILY_BY_CODE = Object.fromEntries(Object.entries(FAMILY_CODE).map(([k, v]) => [v, k])) as Record<string, Family>;
 const ELEMENT_BY_CODE = Object.fromEntries(Object.entries(ELEMENT_CODE).map(([k, v]) => [v, k])) as Record<string, Element>;
+const ABILITY_BY_CODE = Object.fromEntries(Object.entries(ABILITY_CODE).map(([k, v]) => [v, k])) as Record<string, Ability>;
 
 export interface DecodedEntry {
   pos: Pos[];
@@ -56,10 +68,12 @@ export interface DecodedEntry {
   /** Rough Zipf frequency, 1 (rare) to 7 (very common). */
   zipf: number;
   axes: Axes;
+  /** Set for verbs that map to an ability. */
+  ability: Ability | null;
 }
 
 export function decodeEntry(entry: string): DecodedEntry {
-  const [pos, family, element, zipf, digits] = entry.split('.');
+  const [pos, family, element, zipf, digits, ability] = entry.split('.');
   const axes = neutralAxes();
   if (digits) AXES.forEach((a, i) => (axes[a] = Number(digits[i]) - 3));
   return {
@@ -68,5 +82,6 @@ export function decodeEntry(entry: string): DecodedEntry {
     element: ELEMENT_BY_CODE[element] ?? null,
     zipf: Number(zipf),
     axes,
+    ability: ability ? ABILITY_BY_CODE[ability] ?? null : null,
   };
 }

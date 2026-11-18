@@ -46,7 +46,7 @@ export const BALANCE = {
   /** Gold per threat point when a monster dies, and the share of total threat paid at wave end. */
   bountyPerThreat: 0.4,
   /** Chat monsters are cleverer than the Wilds, so they pay more. */
-  chatBountyMultiplier: 1.3,
+  chatBountyMultiplier: 1.5,
   waveClearBonus: 0.2,
   /** Selling refunds this share of what was paid. */
   sellRefund: 0.7,
