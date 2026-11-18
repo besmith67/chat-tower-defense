@@ -249,4 +249,29 @@ export function towerTextures(scene: Phaser.Scene): void {
     g.fillStyle(0xe6fbff, 1);
     g.fillPoints(hex(6), true);
   });
+  make('tower-flame', (g) => {
+    plate(g, 0xff6b35);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(24, 29, 12);
+    g.fillTriangle(12, 28, 24, 4, 36, 28);
+    g.fillStyle(0xff6b35, 1);
+    g.fillCircle(24, 29, 9);
+    g.fillTriangle(15, 28, 24, 9, 33, 28);
+    g.fillStyle(0xffd166, 1);
+    g.fillCircle(24, 31, 5);
+    g.fillTriangle(19, 31, 24, 19, 29, 31);
+  });
+  make('tower-tesla', (g) => {
+    plate(g, 0xffe066);
+    g.fillStyle(0xffffff, 1);
+    g.fillPoints([
+      new Phaser.Math.Vector2(28, 4), new Phaser.Math.Vector2(12, 27), new Phaser.Math.Vector2(22, 27),
+      new Phaser.Math.Vector2(18, 44), new Phaser.Math.Vector2(37, 19), new Phaser.Math.Vector2(26, 19),
+    ], true);
+    g.fillStyle(0xffe066, 1);
+    g.fillPoints([
+      new Phaser.Math.Vector2(26, 9), new Phaser.Math.Vector2(16, 24), new Phaser.Math.Vector2(25, 24),
+      new Phaser.Math.Vector2(22, 37), new Phaser.Math.Vector2(33, 22), new Phaser.Math.Vector2(24, 22),
+    ], true);
+  });
 }

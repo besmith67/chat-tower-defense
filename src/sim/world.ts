@@ -5,6 +5,7 @@
 import type { Genome } from '../genome';
 import { BALANCE } from './balance';
 import type { SpawnOrder } from './collector';
+import { elementMultiplier } from './elements';
 import { createMap, tileKey, COLS, ROWS, TILE, type GameMap, type PortalId } from './map';
 import { armorFactor, formMultiplier, TOWERS, type TowerDef, type TowerId } from './towers';
 
@@ -30,6 +31,10 @@ export interface Monster {
   shieldUp: boolean;
   /** Set once an undying monster has used its second life. */
   revived: boolean;
+  burnUntil: number;
+  burnDps: number;
+  /** The Flame tower that set it burning, credited if the burn kills it. */
+  burnBy: Tower | null;
   bounty: number;
   livesCost: number;
   alive: boolean;
@@ -54,6 +59,7 @@ export type Effectiveness = 'strong' | 'weak' | 'normal';
 export type SimEvent =
   | { type: 'spawn'; monster: Monster }
   | { type: 'shot'; tower: Tower; target: Monster }
+  | { type: 'chain'; tower: Tower; from: Monster; to: Monster }
   | { type: 'pulse'; tower: Tower }
   | { type: 'hit'; monster: Monster; amount: number; effect: Effectiveness }
   | { type: 'reflect'; monster: Monster }
@@ -193,6 +199,9 @@ export class World {
       copeReadyAt: 0,
       shieldUp: genome.quirks.includes('shielded'),
       revived: false,
+      burnUntil: 0,
+      burnDps: 0,
+      burnBy: null,
       bounty: Math.max(1, Math.round(order.cost * BALANCE.bountyPerThreat * (genome.source === 'chat' ? BALANCE.chatBountyMultiplier : 1))),
       livesCost: Math.min(5, Math.max(1, Math.round(order.cost / BALANCE.unitCost))),
       alive: true,
@@ -208,6 +217,13 @@ export class World {
       if (!m.alive) continue;
       m.age += dt;
       if (m.genome.quirks.includes('regen')) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * 0.03 * dt);
+      if (this.time < m.burnUntil && m.burnBy) {
+        m.hp -= m.burnDps * elementMultiplier('fire', m.genome.element) * dt;
+        if (m.hp <= 0) {
+          this.finish(m, m.burnBy);
+          if (!m.alive) continue;
+        }
+      }
       let speed = m.speed * this.speedFactor(m);
       if (hypeSources.some((h) => h !== m && Math.hypot(h.x - m.x, h.y - m.y) < 70)) speed *= 1.25;
       m.dist += speed * dt;
@@ -253,13 +269,14 @@ export class World {
       tower.cooldownLeft -= dt * (gloomed ? 0.65 : 1);
       if (tower.cooldownLeft > 0) continue;
 
-      if (tower.def.kind === 'frost') {
+      if (tower.def.kind === 'cold') {
         const targets = this.monsters.filter((m) => m.alive && this.inRange(tower, m));
         if (targets.length === 0) continue;
         tower.cooldownLeft = tower.def.cooldown;
         this.events.push({ type: 'pulse', tower });
         for (const m of targets) {
-          m.slowFactor = tower.def.slow ?? 0;
+          // Frost monsters shrug off half the chill.
+          m.slowFactor = (tower.def.slow ?? 0) * (m.genome.element === 'frost' ? 0.5 : 1);
           m.slowUntil = this.time + (tower.def.slowSeconds ?? 1);
           this.damage(tower, m);
         }
@@ -278,6 +295,32 @@ export class World {
       } else {
         this.damage(tower, target);
       }
+      if (tower.def.chains) this.chain(tower, target);
+    }
+  }
+
+  /** Lightning jumps from the target to the nearest monsters it has not hit yet. */
+  private chain(tower: Tower, first: Monster): void {
+    const hit = new Set([first]);
+    let from = first;
+    let scale = 1;
+    for (let i = 0; i < (tower.def.chains ?? 0); i++) {
+      scale *= tower.def.chainFalloff ?? 1;
+      let next: Monster | null = null;
+      let best = tower.def.chainRange ?? 0;
+      for (const m of this.monsters) {
+        if (!m.alive || hit.has(m)) continue;
+        const d = Math.hypot(m.x - from.x, m.y - from.y);
+        if (d <= best) {
+          best = d;
+          next = m;
+        }
+      }
+      if (!next) return;
+      hit.add(next);
+      this.events.push({ type: 'chain', tower, from, to: next });
+      this.damage(tower, next, scale);
+      from = next;
     }
   }
 
@@ -302,7 +345,7 @@ export class World {
     return 1 + Math.min(BALANCE.adaptationCap, kills * BALANCE.adaptationPerKill);
   }
 
-  private damage(tower: Tower, m: Monster): void {
+  private damage(tower: Tower, m: Monster, scale = 1): void {
     if (!m.alive) return;
     const q = m.genome.quirks;
     if (m.shieldUp) {
@@ -315,11 +358,16 @@ export class World {
       return;
     }
 
-    const formMult = formMultiplier(tower.def.kind, m.genome.formClass);
+    const matchup = formMultiplier(tower.def.kind, m.genome.formClass) * elementMultiplier(tower.def.kind, m.genome.element);
     const armor = m.armor * armorFactor(tower.def.kind);
-    const amount = tower.def.damage * formMult * (1 - armor) * this.adaptation(tower, m.genome);
+    const amount = tower.def.damage * scale * matchup * (1 - armor) * this.adaptation(tower, m.genome);
     m.hp -= amount;
-    const effect: Effectiveness = formMult > 1 ? 'strong' : formMult < 1 ? 'weak' : 'normal';
+    const effect: Effectiveness = matchup > 1.01 ? 'strong' : matchup < 0.99 ? 'weak' : 'normal';
+    if (tower.def.burnDps) {
+      m.burnUntil = this.time + (tower.def.burnSeconds ?? 1);
+      m.burnDps = tower.def.burnDps * this.adaptation(tower, m.genome);
+      m.burnBy = tower;
+    }
     this.events.push({ type: 'hit', monster: m, amount, effect });
 
     if (q.includes('panic')) m.panicUntil = this.time + 0.6;
@@ -329,13 +377,19 @@ export class World {
       this.events.push({ type: 'heal', monster: m });
     }
 
-    if (m.hp <= 0 && q.includes('undying') && !m.revived) {
+    if (m.hp <= 0) this.finish(m, tower);
+  }
+
+  /** Called when health hits zero. Undying monsters get back up once; everything else dies. */
+  private finish(m: Monster, killer: Tower): void {
+    if (m.genome.quirks.includes('undying') && !m.revived) {
       m.revived = true;
       m.hp = m.maxHp * 0.35;
+      m.burnUntil = 0;
       this.events.push({ type: 'revive', monster: m });
       return;
     }
-    if (m.hp <= 0) this.kill(m, tower);
+    this.kill(m, killer);
   }
 
   private kill(m: Monster, killer: Tower): void {

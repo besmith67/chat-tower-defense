@@ -76,12 +76,13 @@ Goal: a monster behaves like what its word means. Today `snail` and `rocket` dif
 - **Done when.** Tests show `snail` slower than `rocket` regardless of sound, and the balance bot still holds.
 - **Result.** Shipped with three new quirks (regen, undying, stealth). The balance bot gained a simulated busy chat (`npm run balance -- 20 smart chat`). It showed that busy chat was already unwinnable in milestone 1 because spam titans leaked. Fixed: titans slow down with size, stealth is 80 percent range, and chat monsters pay 1.3x bounty. Smart bot: offline 20/20 wins with 19 lives left; busy chat 15/20 with about 10 lives left. Needles-only loses both. The bundle grew to 558 KB gzipped because of the lexicon; lazy-loading it is an option if load time matters.
 
-### M2.4 Elements and two elemental towers: todo
+### M2.4 Elements and two elemental towers: done
 
 - **Depends on.** M2.3.
 - **Goal.** Elements matter in combat. Add a Flame tower (fire damage, burn over time) and a Tesla tower (shock damage, chains to nearby monsters). The Frost tower's damage becomes `cold`.
 - **Build.** A damage-kind vs element table in `src/sim/elements.ts`. Each element resists one kind and is weak to one. Hotkeys 4 and 5.
 - **Done when.** The balance bot plays with five towers, and a strategy that ignores elements does measurably worse than one that reads them.
+- **Result.** Matchups are 1.4x weak and 0.7x resist; 0.5x made resisted monsters slip through. About 60 percent of Wilds now carry an element. Tuned: Flame 5 damage plus 10 burn per second, Tesla 16 damage every 0.9s with 0.8 chain falloff, Frost damage 3 to 7 so Fire has a real counter. Balance bot strategies are now smart (fills damage slots with the best element counter to the chat queue), blind (fixed rotation), worst (control), needles, and lazy. Busy chat, 30 runs: smart 30/30 with 12.5 lives left, blind 26/30 with 9.9, worst 9/30. Offline, smart and blind 20/20 with 18.4 lives. The offline game is easy for a full-coverage bot; real players misplace towers, so leave it until U4 playtest feedback.
 
 ### M2.5 Layer 4: families and body plans: todo
 
@@ -158,6 +159,7 @@ Settled choices, so later chats do not reopen them.
 - **Families.** The ten from MONSTER_GENERATION.md, except Weather is renamed Elemental and also covers substances (lava, water, mud). Plants count as Beasts.
 - **Elements.** Six plus neutral: fire, frost, storm, venom, stone, spirit. Ten was too many to read at a glance on stream.
 - **Damage kinds.** pierce (Needle), blunt (Hammer), cold (Frost), fire (Flame), shock (Tesla).
+- **Element table.** Fire weak to cold, resists fire. Frost weak to fire, resists cold. Storm weak to pierce, resists shock. Venom weak to fire, resists blunt. Stone weak to shock, resists pierce. Spirit weak to shock, resists blunt. Lives in `src/sim/elements.ts`; `src/genome/describe.ts` mirrors it for text.
 - **Form still sets the shape counter.** Meaning changes stats and element, never the spiky or round class. That keeps the counter readable from shape alone.
 - **Wilds stay invented.** Wilds names never hit the lexicon, so they keep layers 1 and 2 only.
 

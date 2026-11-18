@@ -2,7 +2,7 @@
 
 A tower defense game where the streamer defends and the chat attacks.
 
-Viewers on Twitch spam words and emotes. Every word becomes a monster shaped by the word itself: how it sounds, how it is typed, and which emote it is. The streamer builds towers that counter those shapes, so both sides keep adapting to each other. Streams with a quiet chat, or no chat at all, get monsters from the Wilds, which are visibly generated and never pretend to be chat.
+Viewers on Twitch spam words and emotes. Every word becomes a monster shaped by the word itself: what it means, how it sounds, how it is typed, and which emote it is. The streamer builds towers that counter those monsters, so both sides keep adapting to each other. Streams with a quiet chat, or no chat at all, get monsters from the Wilds, which are visibly generated and never pretend to be chat.
 
 **Play it:** https://besmith67.github.io/chat-tower-defense/
 
@@ -15,9 +15,13 @@ Viewers on Twitch spam words and emotes. Every word becomes a monster shaped by 
 
 | Tower | Damage | Strong against | Weak against |
 |---|---|---|---|
-| Needle | Fast piercing shots, ignores half of armor | Round monsters | Spiky monsters |
-| Hammer | Slow blunt splash | Spiky monsters and swarms | Round monsters |
-| Frost | Slowing pulse on everything in range | Fast monsters | Nothing in particular |
+| Needle | Fast piercing shots, ignores half of armor | Round monsters, Storm | Spiky monsters, Stone |
+| Hammer | Slow blunt splash | Spiky monsters and swarms | Round monsters, Venom, Spirit |
+| Frost | Slowing cold pulse on everything in range | Fire, fast monsters | Frost |
+| Flame | Short-range fire that leaves targets burning | Frost, Venom | Fire |
+| Tesla | Lightning that chains to three more monsters | Stone, Spirit, crowds | Storm |
+
+A monster's color shows its element: red fire, cyan frost, yellow storm, green venom, brown stone, purple spirit. Hover a monster to see exactly what it is weak to.
 
 Towers also get stronger against species they have killed many times, so chat has to keep changing what it sends.
 
@@ -25,7 +29,7 @@ Towers also get stronger against species they have killed many times, so chat ha
 
 | Key | Action |
 |---|---|
-| 1, 2, 3 | Pick a tower to build |
+| 1 to 5 | Pick a tower to build |
 | Click | Build, or select a tower |
 | Esc or right click | Cancel |
 | S | Sell the selected tower |
@@ -47,6 +51,7 @@ Skip the setup screen by adding options to the URL. This is handy for an OBS bro
 
 Read [docs/MONSTER_GENERATION.md](docs/MONSTER_GENERATION.md) for the full design. In the current build:
 
+- **Meaning drives behavior.** About 34,000 English words and Twitch slang carry meaning. `snail` is slow and armored, `rocket` is a fast fire construct, `ghost` is a stealthy spirit that gets back up once, and rare words like `quixotic` are elites. Meaning also sets the element.
 - **Sound shapes the body.** Sharp sounds like k, t, and z make spiky, fast monsters. Soft sounds like b, m, and o make round, tanky ones.
 - **Letters add detail.** Syllables become tail segments, vowels become eyes, and consonant clusters become horns. High Scrabble-value words become elites.
 - **Typing style adds quirks.** ALL CAPS enrages. aLtErNaTiNg case taunts towers. A trailing `!`, `?`, or `...` adds a charge, confusion, or drowsiness. Palindromes reflect hits, and l33tspeak adds armor.

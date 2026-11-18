@@ -7,7 +7,7 @@ import { CURATED_EMOTES, CURATED_NUMBERS, type Archetype } from './curated';
 import { readForm, type FormGenes } from './form';
 import { clamp, fnv1a, mulberry32, pick, type Rng } from './hash';
 import { lookupWord } from './lexicon';
-import type { Element } from './lexiconFormat';
+import { ELEMENTS, type Element } from './lexiconFormat';
 import { normalizeToken, type NormalizedToken } from './normalize';
 import { isBlocked } from './safety';
 import type { EmoteRef, FormClass, Genome, Look, Meaning, MonsterSource, Quirk, StatWeights } from './types';
@@ -85,6 +85,13 @@ export function makeWildGenome(rng: Rng): Genome {
     if (!genome) continue;
     const quirkRng = mulberry32(genome.seed ^ 0x9e3779b9);
     if (quirkRng() < 0.3) genome.quirks = dedupe([...genome.quirks, pick(quirkRng, WILD_QUIRKS)]);
+    // Wilds have no meaning, but most still carry an element so offline play teaches the counters.
+    // They stay far less saturated than chat monsters so they never pass for chat.
+    if (quirkRng() < 0.6) {
+      const element = pick(quirkRng, ELEMENTS);
+      genome.element = element;
+      genome.look = { ...genome.look, hue: (ELEMENT_HUE[element] + 360 + Math.round((quirkRng() - 0.5) * 20)) % 360, saturation: 0.28 };
+    }
     return genome;
   }
   // Practically unreachable, but the Wilds must always produce something.

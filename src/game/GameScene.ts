@@ -310,15 +310,12 @@ export class GameScene extends Phaser.Scene {
 
     TOWER_ORDER.forEach((id, i) => {
       const def = TOWERS[id];
-      const b = this.makeButton(12 + i * 206, LAYOUT.bottomY + 9, 198, 56, () => this.selectBuild(id));
-      this.add.image(b.x + 30, b.y + 28, `tower-${id}`).setDepth(92).setScale(0.9);
-      this.add.text(b.x + 60, b.y + 10, def.name, text({ fontSize: '17px', fontStyle: 'bold' })).setDepth(92);
-      this.add.text(b.x + 60, b.y + 32, `◆ ${def.cost}`, text({ fontSize: '14px', color: COLORS.gold })).setDepth(92);
-      this.add.text(b.x + b.w - 10, b.y + 10, `[${def.hotkey}]`, text({ fontSize: '13px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
-      this.add
-        .text(b.x + b.w - 10, b.y + 32, def.kind === 'pierce' ? 'pierce' : def.kind === 'blunt' ? 'blunt' : 'slow', text({ fontSize: '12px', color: COLORS.muted }))
-        .setOrigin(1, 0)
-        .setDepth(92);
+      const b = this.makeButton(12 + i * 124, LAYOUT.bottomY + 9, 118, 56, () => this.selectBuild(id));
+      this.add.image(b.x + 24, b.y + 28, `tower-${id}`).setDepth(92).setScale(0.75);
+      this.add.text(b.x + 44, b.y + 9, def.name, text({ fontSize: '14px', fontStyle: 'bold' })).setDepth(92);
+      this.add.text(b.x + 46, b.y + 30, `◆ ${def.cost}`, text({ fontSize: '13px', color: COLORS.gold })).setDepth(92);
+      this.add.text(b.x + b.w - 6, b.y + 4, def.hotkey, text({ fontSize: '10px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
+      this.add.text(b.x + b.w - 7, b.y + 34, def.role, text({ fontSize: '10px', color: COLORS.muted })).setOrigin(1, 0).setDepth(92);
       this.towerButtons.set(id, b);
     });
 
@@ -375,7 +372,7 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(LAYOUT.panelX + 14, 418, LAYOUT.width - LAYOUT.panelX - 28, 2);
     this.add.text(LAYOUT.panelX + 16, 62, 'NEXT WAVE FROM CHAT', text({ fontSize: '14px', fontStyle: 'bold', color: COLORS.chatText })).setDepth(91);
     this.add
-      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-3 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
+      .text(LAYOUT.panelX + 16, LAYOUT.height - 12, '1-5 build · Esc cancel · S sell · F speed · ` test chat', text({ fontSize: '11px', color: COLORS.muted }))
       .setOrigin(0, 1)
       .setDepth(91);
   }
@@ -661,6 +658,9 @@ export class GameScene extends Phaser.Scene {
       case 'shot':
         this.shotFx(e.tower, e.target);
         break;
+      case 'chain':
+        this.boltFx(sx(e.from.x), sy(e.from.y), sx(e.to.x), sy(e.to.y));
+        break;
       case 'pulse': {
         const ring = this.add.circle(sx(e.tower.x), sy(e.tower.y), 10).setStrokeStyle(3, 0x90e0ef, 0.9).setDepth(40);
         this.tweens.add({ targets: ring, radius: e.tower.def.range, alpha: 0, duration: 380, onComplete: () => ring.destroy() });
@@ -713,10 +713,42 @@ export class GameScene extends Phaser.Scene {
     if (t.def.kind === 'pierce') {
       const line = this.add.line(0, 0, sx(t.x), sy(t.y) - 10, sx(target.x), sy(target.y), 0xbdeeff, 0.9).setOrigin(0).setLineWidth(2).setDepth(40);
       this.tweens.add({ targets: line, alpha: 0, duration: 110, onComplete: () => line.destroy() });
+    } else if (t.def.kind === 'fire') {
+      for (let i = 0; i < 3; i++) {
+        const blob = this.add.circle(sx(t.x), sy(t.y) - 8, 5 + i * 2, i === 0 ? 0xffd166 : 0xff6b35, 0.85).setDepth(40);
+        this.tweens.add({
+          targets: blob,
+          x: sx(target.x) + (i - 1) * 5,
+          y: sy(target.y) + (i - 1) * 4,
+          alpha: 0.2,
+          duration: 140 + i * 40,
+          onComplete: () => blob.destroy(),
+        });
+      }
+    } else if (t.def.kind === 'shock') {
+      this.boltFx(sx(t.x), sy(t.y) - 12, sx(target.x), sy(target.y));
     } else {
       const boom = this.add.circle(sx(target.x), sy(target.y), t.def.splash ?? 30, 0xf8961e, 0.28).setStrokeStyle(3, 0xffc078, 0.9).setDepth(40).setScale(0.4);
       this.tweens.add({ targets: boom, scale: 1, alpha: 0, duration: 260, onComplete: () => boom.destroy() });
     }
+  }
+
+  /** A jagged lightning line that fades fast. */
+  private boltFx(x1: number, y1: number, x2: number, y2: number): void {
+    const g = this.add.graphics().setDepth(41);
+    const steps = 6;
+    const nx = -(y2 - y1);
+    const ny = x2 - x1;
+    const len = Math.hypot(nx, ny) || 1;
+    const points: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      const jitter = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 16;
+      points.push(new Phaser.Math.Vector2(x1 + (x2 - x1) * f + (nx / len) * jitter, y1 + (y2 - y1) * f + (ny / len) * jitter));
+    }
+    g.lineStyle(5, 0xffe066, 0.35).strokePoints(points);
+    g.lineStyle(2, 0xffffff, 1).strokePoints(points);
+    this.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
   }
 
   private deathFx(m: Monster): void {
@@ -839,7 +871,8 @@ export class GameScene extends Phaser.Scene {
       v.sprite.y = -Math.abs(Math.sin(m.age * 8 + m.genome.look.phase)) * bounce;
       if (v.face) v.face.y = v.sprite.y - m.genome.look.radius * 0.05;
 
-      if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
+      if (w.time < m.burnUntil) v.sprite.setTint(0xffb08a);
+      else if (w.time < m.slowUntil) v.sprite.setTint(0xa8e4ff);
       else if (m.genome.quirks.includes('enraged') && m.hp < m.maxHp * 0.6) v.sprite.setTint(0xff9a9a);
       else v.sprite.clearTint();
       v.root.setAlpha(m.genome.quirks.includes('stealth') ? 0.45 : m.genome.quirks.includes('drowsy') ? 0.7 : 1);

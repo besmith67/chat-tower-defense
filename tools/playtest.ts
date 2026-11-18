@@ -40,7 +40,7 @@ await page.evaluate(() => {
   scene.registry.get('match').world.gold = 2000;
   const towers: [string, number, number][] = [
     ['needle', 3, 4], ['hammer', 5, 6], ['needle', 8, 4], ['frost', 10, 5], ['hammer', 14, 4],
-    ['needle', 16, 7], ['needle', 14, 10], ['hammer', 19, 10], ['frost', 21, 8], ['needle', 19, 5],
+    ['tesla', 16, 7], ['flame', 14, 10], ['hammer', 19, 10], ['frost', 21, 8], ['tesla', 19, 5], ['flame', 7, 8],
   ];
   for (const [id, c, r] of towers) scene.debugPlace(id, c, r);
   const custom = (window as any).__words as string[] | undefined;

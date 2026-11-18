@@ -63,13 +63,42 @@ export function meaningText(genome: Genome): string | null {
   return parts.join(' · ');
 }
 
+/** Which tower deals each damage kind, for player-facing text. */
+const KIND_TOWER: Record<string, string> = { pierce: 'Needle', blunt: 'Hammer', cold: 'Frost', fire: 'Flame', shock: 'Tesla' };
+
+/** Element matchups, mirrored from src/sim/elements.ts so the generator stays free of sim imports. */
+const ELEMENT_COUNTERS: Record<Element, { weakTo: string; resists: string }> = {
+  fire: { weakTo: 'cold', resists: 'fire' },
+  frost: { weakTo: 'fire', resists: 'cold' },
+  storm: { weakTo: 'pierce', resists: 'shock' },
+  venom: { weakTo: 'fire', resists: 'blunt' },
+  stone: { weakTo: 'shock', resists: 'pierce' },
+  spirit: { weakTo: 'shock', resists: 'blunt' },
+};
+
 export function weaknessText(genome: Genome): string {
+  const weak: string[] = [];
+  const resist: string[] = [];
+  if (genome.formClass === 'round') { weak.push('Needle'); resist.push('Hammer'); }
+  if (genome.formClass === 'spiky') { weak.push('Hammer'); resist.push('Needle'); }
+  if (genome.element) {
+    const c = ELEMENT_COUNTERS[genome.element];
+    const w = KIND_TOWER[c.weakTo];
+    const r = KIND_TOWER[c.resists];
+    if (!weak.includes(w)) weak.push(w);
+    if (!resist.includes(r)) resist.push(r);
+  }
+  // A tower that is both strong (shape) and weak (element) roughly cancels out; show neither.
+  const both = weak.filter((t) => resist.includes(t));
   const parts: string[] = [];
-  if (genome.formClass === 'round') parts.push('Weak to Needle, resists Hammer');
-  else if (genome.formClass === 'spiky') parts.push('Weak to Hammer, resists Needle');
-  else parts.push('No shape weakness');
+  const w = weak.filter((t) => !both.includes(t));
+  const r = resist.filter((t) => !both.includes(t));
+  if (w.length) parts.push(`Weak to ${w.join(' and ')}`);
+  if (r.length) parts.push(`resists ${r.join(' and ')}`);
+  if (!parts.length) parts.push('No weakness');
   if (genome.swarm > 1) parts.push('Hammer splash shreds swarms');
-  return parts.join('. ') + '.';
+  const sentence = parts.join(', ');
+  return sentence[0].toUpperCase() + sentence.slice(1) + '.';
 }
 
 export function formText(genome: Genome): string {

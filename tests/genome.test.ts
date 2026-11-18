@@ -193,3 +193,14 @@ describe('meaning layer', () => {
     expect(meaningText(g('zaly'))).toBeNull();
   });
 });
+
+describe('Wilds elements', () => {
+  it('gives most Wilds an element, in a muted color', () => {
+    const rng = mulberry32(7);
+    const wilds = Array.from({ length: 200 }, () => makeWildGenome(rng));
+    const elemental = wilds.filter((g) => g.element);
+    expect(elemental.length).toBeGreaterThan(80);
+    expect(elemental.length).toBeLessThan(170);
+    for (const g of elemental) expect(g.look.saturation).toBeLessThan(0.3);
+  });
+});

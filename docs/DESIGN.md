@@ -31,6 +31,31 @@ Towers counter monster tags, and tags come from the generator.
 
 Each tower hits one or two tags hard and is weak against one. Towers also gain bonus damage against species they have killed many times, so chat must keep changing what it sends.
 
+### Towers (shipped)
+
+| Tower | Hotkey | Cost | Damage kind | Role |
+|---|---|---|---|---|
+| Needle | 1 | 50 | pierce | Fast single target, half armor. Strong vs round, weak vs spiky. |
+| Hammer | 2 | 75 | blunt | Slow splash. Strong vs spiky and swarms, weak vs round. |
+| Frost | 3 | 65 | cold | Pulse that slows everything in range and ignores armor. |
+| Flame | 4 | 70 | fire | Short range. Sets targets burning; burn ignores armor. |
+| Tesla | 5 | 85 | shock | Lightning that chains to three more monsters. |
+
+### Element matchups (shipped)
+
+Each element resists one damage kind (0.7x) and is weak to one (1.4x). These multiply with the shape counter.
+
+| Element | Weak to | Resists |
+|---|---|---|
+| Fire | Frost | Flame |
+| Frost | Flame | Frost (and half the slow) |
+| Storm | Needle | Tesla |
+| Venom | Flame | Hammer |
+| Stone | Tesla | Needle |
+| Spirit | Tesla | Hammer |
+
+About 60 percent of Wilds monsters carry a random element, in a muted color, so offline play still teaches the counters.
+
 ## Scaling and balance
 
 A 20,000-viewer chat cannot be allowed to send 20,000 times the monsters of a 20-viewer chat.
